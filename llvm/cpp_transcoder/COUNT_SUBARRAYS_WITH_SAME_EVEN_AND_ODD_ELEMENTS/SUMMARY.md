@@ -1,0 +1,85 @@
+# cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS
+
+- Source: `COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp`
+- Source note: processed source
+
+## O0
+
+- Status: ok
+- Features: integer arithmetic, bitwise/shift, comparisons, control flow, loop, memory/pointer, casts/conversions, calls/intrinsics, aggregates, UB-related, globals, external declarations
+- Compiler messages:
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: warning: & has lower precedence than =`
+  - `    if ( arr [ i ] & 1 == 1 ) difference ++;`
+  - `                   ^~~~~~~~`
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: note: place parentheses around the '==`
+  - `    if ( arr [ i ] & 1 == 1 ) difference ++;`
+  - `                   ^`
+  - `                     (     )`
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: note: place parentheses around the & e`
+- Evidence:
+  - integer arithmetic: `%14 = add nsw i32 %13, 1`
+  - bitwise/shift: `%39 = and i32 %38, 1`
+  - comparisons: `%32 = icmp slt i32 %30, %31`
+  - control flow: `br label %29`
+  - loop: `llvm.loop metadata`
+  - memory/pointer: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) #4 {`
+  - casts/conversions: `%15 = zext i32 %14 to i64`
+  - calls/intrinsics: `%16 = call i8* @llvm.stacksave()`
+  - aggregates: `%"class.std::ios_base::Init" = type { i8 }`
+  - UB-related: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) #4 {`
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #1`
+
+## O1
+
+- Status: ok
+- Features: integer arithmetic, bitwise/shift, comparisons, control flow, loop, memory/pointer, casts/conversions, calls/intrinsics, aggregates, UB-related, globals, external declarations
+- Compiler messages:
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: warning: & has lower precedence than =`
+  - `    if ( arr [ i ] & 1 == 1 ) difference ++;`
+  - `                   ^~~~~~~~`
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: note: place parentheses around the '==`
+  - `    if ( arr [ i ] & 1 == 1 ) difference ++;`
+  - `                   ^`
+  - `                     (     )`
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: note: place parentheses around the & e`
+- Evidence:
+  - integer arithmetic: `%3 = add nsw i32 %1, 1`
+  - bitwise/shift: `%12 = shl nsw i64 %11, 2`
+  - comparisons: `%7 = icmp slt i32 %1, 0`
+  - control flow: `br i1 %7, label %14, label %8`
+  - loop: `llvm.loop metadata`
+  - memory/pointer: `define dso_local noundef i32 @_Z6f_goldPii(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #3 {`
+  - casts/conversions: `%4 = zext i32 %3 to i64`
+  - calls/intrinsics: `call void @llvm.memset.p0i8.i64(i8* nonnull align 16 %10, i8 0, i64 %12, i1 false), !tbaa !5`
+  - aggregates: `%"class.std::ios_base::Init" = type { i8 }`
+  - UB-related: `define dso_local noundef i32 @_Z6f_goldPii(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #3 {`
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #0`
+
+## O2
+
+- Status: ok
+- Features: integer arithmetic, bitwise/shift, comparisons, control flow, loop, memory/pointer, casts/conversions, calls/intrinsics, aggregates, UB-related, globals, external declarations
+- Compiler messages:
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: warning: & has lower precedence than =`
+  - `    if ( arr [ i ] & 1 == 1 ) difference ++;`
+  - `                   ^~~~~~~~`
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: note: place parentheses around the '==`
+  - `    if ( arr [ i ] & 1 == 1 ) difference ++;`
+  - `                   ^`
+  - `                     (     )`
+  - `benchmark/cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS_processed.cpp:20:20: note: place parentheses around the & e`
+- Evidence:
+  - integer arithmetic: `%3 = add nsw i32 %1, 1`
+  - bitwise/shift: `%12 = shl nuw nsw i64 %4, 2`
+  - comparisons: `%7 = icmp slt i32 %1, 0`
+  - control flow: `br i1 %7, label %8, label %9`
+  - loop: `llvm.loop metadata`
+  - memory/pointer: `define dso_local noundef i32 @_Z6f_goldPii(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #3 {`
+  - casts/conversions: `%4 = zext i32 %3 to i64`
+  - calls/intrinsics: `call void @llvm.memset.p0i8.i64(i8* nonnull align 16 %11, i8 0, i64 %12, i1 false), !tbaa !5`
+  - aggregates: `%"class.std::ios_base::Init" = type { i8 }`
+  - UB-related: `define dso_local noundef i32 @_Z6f_goldPii(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #3 {`
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #0`

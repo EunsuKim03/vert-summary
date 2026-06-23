@@ -1,0 +1,47 @@
+# c_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT
+
+- Source: `NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT_processed.c`
+- Source note: processed source
+
+## O0
+
+- Status: ok
+- Features: integer arithmetic, comparisons, control flow, loop, memory/pointer, casts/conversions, UB-related
+- Evidence:
+  - integer arithmetic: `%22 = add nsw i32 %21, 1`
+  - comparisons: `%12 = icmp slt i32 %10, %11`
+  - control flow: `br label %9`
+  - loop: `llvm.loop metadata`
+  - memory/pointer: `define dso_local i32 @f_gold(i32* noundef %0, i32 noundef %1) #0 {`
+  - casts/conversions: `%16 = sext i32 %15 to i64`
+  - UB-related: `define dso_local i32 @f_gold(i32* noundef %0, i32 noundef %1) #0 {`
+
+## O1
+
+- Status: ok
+- Features: integer arithmetic, comparisons, control flow, loop, memory/pointer, casts/conversions, UB-related
+- Evidence:
+  - integer arithmetic: `%9 = add nsw i32 %8, -1`
+  - comparisons: `%3 = icmp sgt i32 %1, 0`
+  - control flow: `br i1 %3, label %4, label %6`
+  - loop: `llvm.loop metadata`
+  - memory/pointer: `define dso_local i32 @f_gold(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #0 {`
+  - casts/conversions: `%5 = zext i32 %1 to i64`
+  - UB-related: `define dso_local i32 @f_gold(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #0 {`
+
+## O2
+
+- Status: ok
+- Features: integer arithmetic, bitwise/shift, comparisons, control flow, loop, memory/pointer, casts/conversions, calls/intrinsics, vector/SIMD, UB-related, external declarations
+- Evidence:
+  - integer arithmetic: `%25 = add <4 x i32> %11, %23`
+  - bitwise/shift: `%8 = and i64 %5, 4294967288`
+  - comparisons: `%3 = icmp sgt i32 %1, 0`
+  - control flow: `br i1 %3, label %4, label %45`
+  - loop: `llvm.loop metadata`
+  - memory/pointer: `define dso_local i32 @f_gold(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #0 {`
+  - casts/conversions: `%5 = zext i32 %1 to i64`
+  - calls/intrinsics: `%37 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %36)`
+  - vector/SIMD: `%11 = phi <4 x i32> [ zeroinitializer, %7 ], [ %25, %9 ]`
+  - UB-related: `define dso_local i32 @f_gold(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #0 {`
+  - external declarations: `declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>) #1`

@@ -1,0 +1,113 @@
+; ModuleID = 'benchmark/c_transcoder/MINIMUM_INSERTIONS_SORT_ARRAY/MINIMUM_INSERTIONS_SORT_ARRAY_processed.c'
+source_filename = "benchmark/c_transcoder/MINIMUM_INSERTIONS_SORT_ARRAY/MINIMUM_INSERTIONS_SORT_ARRAY_processed.c"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+; Function Attrs: nofree norecurse nosync nounwind readonly uwtable
+define dso_local i32 @f_gold(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #0 {
+  %3 = zext i32 %1 to i64
+  %4 = alloca i32, i64 %3, align 16
+  %5 = icmp sgt i32 %1, 0
+  br i1 %5, label %6, label %8
+
+6:                                                ; preds = %2
+  %7 = zext i32 %1 to i64
+  br label %12
+
+8:                                                ; preds = %12, %2
+  %9 = icmp sgt i32 %1, 1
+  br i1 %9, label %10, label %22
+
+10:                                               ; preds = %8
+  %11 = zext i32 %1 to i64
+  br label %17
+
+12:                                               ; preds = %6, %12
+  %13 = phi i64 [ 0, %6 ], [ %15, %12 ]
+  %14 = getelementptr inbounds i32, i32* %4, i64 %13
+  store i32 1, i32* %14, align 4, !tbaa !5
+  %15 = add nuw nsw i64 %13, 1
+  %16 = icmp eq i64 %15, %7
+  br i1 %16, label %8, label %12, !llvm.loop !9
+
+17:                                               ; preds = %10, %26
+  %18 = phi i64 [ 1, %10 ], [ %27, %26 ]
+  %19 = getelementptr inbounds i32, i32* %0, i64 %18
+  %20 = load i32, i32* %19, align 4, !tbaa !5
+  %21 = getelementptr inbounds i32, i32* %4, i64 %18
+  br label %29
+
+22:                                               ; preds = %26, %8
+  %23 = icmp sgt i32 %1, 0
+  br i1 %23, label %24, label %44
+
+24:                                               ; preds = %22
+  %25 = zext i32 %1 to i64
+  br label %47
+
+26:                                               ; preds = %41
+  %27 = add nuw nsw i64 %18, 1
+  %28 = icmp eq i64 %27, %11
+  br i1 %28, label %22, label %17, !llvm.loop !12
+
+29:                                               ; preds = %17, %41
+  %30 = phi i64 [ 0, %17 ], [ %42, %41 ]
+  %31 = getelementptr inbounds i32, i32* %0, i64 %30
+  %32 = load i32, i32* %31, align 4, !tbaa !5
+  %33 = icmp slt i32 %20, %32
+  br i1 %33, label %41, label %34
+
+34:                                               ; preds = %29
+  %35 = load i32, i32* %21, align 4, !tbaa !5
+  %36 = getelementptr inbounds i32, i32* %4, i64 %30
+  %37 = load i32, i32* %36, align 4, !tbaa !5
+  %38 = icmp sgt i32 %35, %37
+  br i1 %38, label %41, label %39
+
+39:                                               ; preds = %34
+  %40 = add nsw i32 %37, 1
+  store i32 %40, i32* %21, align 4, !tbaa !5
+  br label %41
+
+41:                                               ; preds = %29, %34, %39
+  %42 = add nuw nsw i64 %30, 1
+  %43 = icmp eq i64 %42, %18
+  br i1 %43, label %26, label %29, !llvm.loop !13
+
+44:                                               ; preds = %47, %22
+  %45 = phi i32 [ 0, %22 ], [ %53, %47 ]
+  %46 = sub nsw i32 %1, %45
+  ret i32 %46
+
+47:                                               ; preds = %24, %47
+  %48 = phi i64 [ 0, %24 ], [ %54, %47 ]
+  %49 = phi i32 [ 0, %24 ], [ %53, %47 ]
+  %50 = getelementptr inbounds i32, i32* %4, i64 %48
+  %51 = load i32, i32* %50, align 4, !tbaa !5
+  %52 = icmp slt i32 %49, %51
+  %53 = select i1 %52, i32 %51, i32 %49
+  %54 = add nuw nsw i64 %48, 1
+  %55 = icmp eq i64 %54, %25
+  br i1 %55, label %44, label %47, !llvm.loop !14
+}
+
+attributes #0 = { nofree norecurse nosync nounwind readonly uwtable "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 7, !"PIC Level", i32 2}
+!2 = !{i32 7, !"PIE Level", i32 2}
+!3 = !{i32 7, !"uwtable", i32 1}
+!4 = !{!"Ubuntu clang version 14.0.0-1ubuntu1.1"}
+!5 = !{!6, !6, i64 0}
+!6 = !{!"int", !7, i64 0}
+!7 = !{!"omnipotent char", !8, i64 0}
+!8 = !{!"Simple C/C++ TBAA"}
+!9 = distinct !{!9, !10, !11}
+!10 = !{!"llvm.loop.mustprogress"}
+!11 = !{!"llvm.loop.unroll.disable"}
+!12 = distinct !{!12, !10, !11}
+!13 = distinct !{!13, !10, !11}
+!14 = distinct !{!14, !10, !11}
