@@ -1,0 +1,32 @@
+/* Auto-generated for LLVM emit: selected non-function raw definitions and standard headers needed by processed source. */
+#include <algorithm>
+#include <iostream>
+#include <cstdlib>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <iomanip>
+
+
+#include <iostream>
+#include <cstdlib>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <iomanip>
+
+using namespace std;
+int f_gold ( int arr [ ], int n ) {
+  int result = 0;
+  sort ( arr, arr + n );
+  for ( int i = 0;
+  i < n - 1;
+  i ++ ) {
+    if ( arr [ i ] != arr [ i + 1 ] ) result += abs ( arr [ i ] );
+    else i ++;
+  }
+  if ( arr [ n - 2 ] != arr [ n - 1 ] ) result += abs ( arr [ n - 1 ] );
+  return result;
+}
+
+

@@ -1,0 +1,28 @@
+# go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER
+
+- Kind: llm-output-block
+- Status: ok
+- Source note: out-rwasm-bolero/src/main.rs; added crate-level allow attributes; added #[no_mangle] to top-level non-main functions where possible
+- Source: `rust_funcs/go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER/COUNT_SET_BITS_IN_AN_INTEGER.rs`
+- Emit source: `rust_funcs/go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER/COUNT_SET_BITS_IN_AN_INTEGER_emit.rs`
+- CSV compile expected: False
+- CSV duplicate rows: no
+- CSV rows:
+  - `COUNT_SET_BITS_IN_AN_INTEGER, compile=0, bolero=0, bounded_kani=0, full_kani=0`
+
+## LLVM IR emission
+
+### O0
+
+- Status: ok
+- IR: `rust_funcs/go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER/O0.ll`
+
+### O1
+
+- Status: ok
+- IR: `rust_funcs/go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER/O1.ll`
+
+### O2
+
+- Status: ok
+- IR: `rust_funcs/go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER/O2.ll`

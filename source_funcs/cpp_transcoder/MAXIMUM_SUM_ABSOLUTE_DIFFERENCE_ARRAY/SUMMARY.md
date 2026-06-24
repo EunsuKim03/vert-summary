@@ -1,0 +1,114 @@
+# cpp_transcoder/MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY
+
+- Source: `MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY_reprocessed.cpp`
+- Source note: processed source; reprocessed source: <algorithm> for sort
+
+## O0
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - comparisons
+  - control flow
+  - loop
+  - recursion
+  - unreachable
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - C++/exception
+  - UB-related
+  - globals
+  - external declarations
+- Evidence:
+  - integer arithmetic: `%20 = sdiv i32 %19, 2`
+  - bitwise/shift: `%49 = and i64 %48, 1`
+  - comparisons: `%21 = icmp slt i32 %18, %20`
+  - control flow: `br label %17`
+  - loop: `llvm.loop metadata`
+  - recursion: `_ZSt16__introsort_loopIPilN9__gnu_cxx5__ops15_Iter_less_iterEEvT_S4_T0_T1_ calls itself`
+  - unreachable: `unreachable`
+  - memory/pointer: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) #4 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - casts/conversions: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) #4 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - calls/intrinsics: `call void @_ZNSt6vectorIiSaIiEEC2Ev(%"class.std::vector"* noundef nonnull align 8 dereferenceable(24) %5) #3`
+  - aggregates: `%41 = extractvalue { i8*, i32 } %40, 0`
+  - C++/exception: `invoke void @_ZSt4sortIPiEvT_S1_(i32* noundef %11, i32* noundef %15)`
+  - UB-related: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) #4 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #1`
+
+## O1
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - comparisons
+  - control flow
+  - loop
+  - recursion
+  - unreachable
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - C++/exception
+  - UB-related
+  - globals
+  - external declarations
+- Evidence:
+  - integer arithmetic: `%16 = sdiv i32 %1, 2`
+  - bitwise/shift: `%10 = shl nuw nsw i64 %9, 1`
+  - comparisons: `%7 = icmp eq i32 %1, 0`
+  - control flow: `br i1 %7, label %13, label %8`
+  - loop: `llvm.loop metadata`
+  - recursion: `_ZSt16__introsort_loopIPilN9__gnu_cxx5__ops15_Iter_less_iterEEvT_S4_T0_T1_ calls itself`
+  - unreachable: `unreachable`
+  - memory/pointer: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) local_unnamed_addr #3 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - casts/conversions: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) local_unnamed_addr #3 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - calls/intrinsics: `call void @llvm.lifetime.start.p0i8(i64 24, i8* nonnull %4) #13`
+  - aggregates: `%"class.std::ios_base::Init" = type { i8 }`
+  - C++/exception: `invoke void @_ZSt16__introsort_loopIPilN9__gnu_cxx5__ops15_Iter_less_iterEEvT_S4_T0_T1_(i32* noundef %0, i32* noundef nonnull %6, i64 noundef %11)`
+  - UB-related: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) local_unnamed_addr #3 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #0`
+
+## O2
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - comparisons
+  - control flow
+  - loop
+  - recursion
+  - unreachable
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - vector/SIMD
+  - C++/exception
+  - UB-related
+  - globals
+  - external declarations
+- Evidence:
+  - integer arithmetic: `%13 = add nsw i32 %1, -1`
+  - bitwise/shift: `%7 = shl nuw nsw i64 %6, 1`
+  - comparisons: `%5 = icmp ne i32 %1, 0`
+  - control flow: `br label %54`
+  - loop: `llvm.loop metadata`
+  - recursion: `_ZSt16__introsort_loopIPilN9__gnu_cxx5__ops15_Iter_less_iterEEvT_S4_T0_T1_ calls itself`
+  - unreachable: `unreachable`
+  - memory/pointer: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) local_unnamed_addr #3 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - casts/conversions: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) local_unnamed_addr #3 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - calls/intrinsics: `call void @llvm.assume(i1 %5)`
+  - aggregates: `%"class.std::ios_base::Init" = type { i8 }`
+  - vector/SIMD: `%22 = insertelement <4 x i32> poison, i32 %18, i64 3`
+  - C++/exception: `invoke void @_ZSt20__throw_length_errorPKc(i8* noundef getelementptr inbounds ([26 x i8], [26 x i8]* @.str, i64 0, i64 0)) #14`
+  - UB-related: `define dso_local noundef i32 @_Z6f_goldPii(i32* noundef %0, i32 noundef %1) local_unnamed_addr #3 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {`
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #0`

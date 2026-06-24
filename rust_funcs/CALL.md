@@ -1,0 +1,4621 @@
+# Rust Library and Lowered Call Summary
+
+This document summarizes non-trivial calls used by the extracted Rust benchmark functions and by the `f_gold`-only LLVM IR files.
+
+## Scope
+
+- Source scan: `1404` Rust `f_gold` sources under `rust_funcs/{c,cpp,go}_transcoder/*/*.rs`.
+- Source files without a recoverable `fn f_gold`: `5`.
+- LLVM IR scan: `O0_func.ll`, `O1_func.ll`, `O2_func.ll`; non-empty files are O0=1072, O1=1072, O2=1072.
+- Counts are unique benchmarks per category, not raw call counts, unless a table explicitly says symbol call count.
+
+## Source-Level Categories
+
+| Category | Benchmarks | What it means |
+|---|---:|---|
+| `Vec/String/allocation APIs` | 295 | Uses Rust-owned sequence/string types or allocation-shaped constructors/APIs (`Vec`, `String`, `vec!`, `String::`, `Vec::`, `format!`, `to_string`). This is broader than pure heap allocation because a by-value `String` parameter still lowers through Rust string/drop semantics. |
+| `sort / sort_by` | 110 | Calls slice/vector sorting APIs or the local helper `sort(...)` that delegates to `sort_by`. |
+| `iterator/string APIs` | 167 | Uses iterator adapters or string traversal/query APIs such as `.chars()`, `.iter()`, `.bytes()`, `.contains()`, `.nth()`, `.enumerate()`, `.collect()`, `.rev()`. |
+| `math methods/helpers` | 140 | Uses numeric helper methods/functions beyond primitive integer operators: `.sqrt()`, `.pow*()`, `.abs()`, `.ceil()`, `.floor()`, `.ln()`, `.log*()`, trig/rounding helpers. |
+| `collections` | 5 | Uses collection types beyond `Vec`/`String`, e.g. `HashMap`, `HashSet`, `VecDeque`, `BTreeMap`, `BinaryHeap`. |
+| `print/output` | 14 | Calls output macros or direct std printing helpers from inside `f_gold`. |
+| `input/stdin` | 0 | Calls stdin/read-line APIs inside `f_gold`. |
+| `file I/O` | 0 | Calls file-system APIs inside `f_gold`. |
+
+### Source Examples
+
+#### Vec/String/allocation APIs
+
+- `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET`: `let mut bell = vec![vec![0; n as usize + 1]; n as usize + 1];`
+- `c_transcoder/CHECK_POSSIBLE_TRANSFORM_ONE_STRING_ANOTHER`: `let mut dp = vec![vec![0; m + 1]; n + 1];`
+- `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION`: `let mut c = vec![0; r as usize + 1];`
+- `c_transcoder/CONVERT_STRICTLY_INCREASING_ARRAY_MINIMUM_CHANGES`: `let mut LIS = vec![1; n];`
+- `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1`: `let mut dp = vec![1; x as usize + 1];`
+- `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1`: `let mut dp = vec![vec![0.0; m as usize + 1]; n as usize + 1];`
+- `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS`: `fn f_gold(str: Vec<char>) -> i32 {`
+- `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1`: `let mut der = vec![0; n as usize + 1];`
+
+#### sort / sort_by
+
+- `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED`: `temp.sort();`
+- `c_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY`: `arr.sort();`
+- `c_transcoder/CHOCOLATE_DISTRIBUTION_PROBLEM`: `arr.sort();`
+- `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS`: `arr.sort_by(|a, b| a.cmp(b));`
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1`: `arr.sort();`
+- `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY`: `arr.sort();`
+- `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW`: `arr.sort();`
+- `c_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY`: `arr.sort_unstable();`
+
+#### iterator/string APIs
+
+- `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING`: `for c in str.iter().skip(1) {`
+- `c_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP_1`: `sum += str.chars().nth(i).unwrap() as i32 - '0' as i32;`
+- `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME`: `if str.chars().nth(l).unwrap() !=  str.chars().nth(h).unwrap() {`
+- `c_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT`: `if i % 2 == 0 {odd_dig_sum += str.chars().nth(i).unwrap().to_digit(10).unwrap() as i32}`
+- `c_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_3_NOT`: `digit_sum += str.chars().nth(i).unwrap() as u8 - b'0';   }`
+- `c_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_4_NOT`: `return (str.chars().nth(0).unwrap() as u8 - b'0') % 4 == 0;`
+- `c_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_6_NOT`: `if (str.chars().last().unwrap() as u32 - '0' as u32) % 2 != 0 {`
+- `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT`: `while str.chars().nth(i) == Some('a') {i += 1;}`
+
+#### math methods/helpers
+
+- `c_transcoder/AREA_OF_A_HEXAGON`: `(3.0 * (3.0f32).sqrt() * s * s) / 2.0`
+- `c_transcoder/BIRTHDAY_PARADOX`: `(std::f32::consts::SQRT_2 * 365. * (std::f32::consts::E.ln() / (1. - p))).ceil() as i32`
+- `c_transcoder/CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND`: `let mut angle = (hour_angle - minute_angle).abs();`
+- `c_transcoder/CALCULATE_VOLUME_DODECAHEDRON`: `let root_5 = 5.0_f32.sqrt();`
+- `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION`: `z = (2.0 * 3.14 * n as f32).sqrt() * (n as f32 / e).powf(n as f32);`
+- `c_transcoder/CHECK_GIVEN_CIRCLE_LIES_COMPLETELY_INSIDE_RING_FORMED_TWO_CONCENTRIC_CIRCLES`: `let dis = (x1 as f32).powi(2) + (y1 as f32).powi(2);`
+- `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT`: `if (digit2 as f32 - digit1 as f32).abs() > 1.0 {`
+- `c_transcoder/CHECK_IF_A_NUMBER_IS_POWER_OF_ANOTHER_NUMBER_1`: `let res1 = (x as f32).log(y as f32).log(x as f32);`
+
+#### collections
+
+- `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER`: `let mut dp: HashMap<i32, i32> = HashMap::new();`
+- `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1`: `let mut set = HashSet::new();`
+- `cpp_transcoder/COUNT_NATURAL_NUMBERS_WHOSE_PERMUTATION_GREATER_NUMBER`: `let mut stack = VecDeque::new();`
+- `cpp_transcoder/FIND_EXPRESSION_DUPLICATE_PARENTHESIS_NOT`: `let mut stack: VecDeque<char> = VecDeque::new();`
+- `cpp_transcoder/MAXIMUM_AREA_RECTANGLE_PICKING_FOUR_SIDES_ARRAY`: `use std::collections::HashMap;`
+
+#### print/output
+
+- `c_transcoder/CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND`: `println!("Wrong input");`
+- `c_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1`: `println!("Triplet is {}, {}, {}", A[i], A[l], A[r]);`
+- `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S`: `if maxsize == -1 { println!("No such subarray"); }`
+- `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K`: `println!("number is not present!");`
+- `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1`: `println!("number is not present!");`
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM`: `println!("Sum found between indexes {} and {}", i, j-1);`
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM_1`: `println!("Sum found between indexes {} and {}", start, i - 1);`
+- `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S`: `println!("No such subarray");`
+
+#### input/stdin
+
+- No source-level occurrence found in `f_gold`.
+
+#### file I/O
+
+- No source-level occurrence found in `f_gold`.
+
+## LLVM IR Call Categories
+
+| Category | O0 benchmarks | O1 benchmarks | O2 benchmarks | Unique symbols | Raw calls across O0/O1/O2 |
+|---|---:|---:|---:|---:|---:|
+| `llvm.* intrinsics` | 922 | 555 | 558 | 52 | 12618 |
+| `core::panicking::*` | 975 | 586 | 395 | 13 | 5695 |
+| `alloc/Vec/String/box runtime` | 296 | 225 | 227 | 33 | 2390 |
+| `other direct calls` | 410 | 15 | 172 | 33 | 1149 |
+| `iterator/range/option runtime` | 361 | 65 | 65 | 20 | 1200 |
+| `math helpers/intrinsics` | 68 | 52 | 52 | 16 | 253 |
+| `slice sort runtime` | 0 | 58 | 48 | 2 | 186 |
+| `direct recursion/self-call` | 63 | 16 | 16 | 1 | 169 |
+| `std::io::stdio::_print` | 9 | 9 | 9 | 1 | 39 |
+| `collections runtime` | 1 | 2 | 2 | 8 | 18 |
+| `formatting traits/runtime` | 9 | 0 | 0 | 4 | 19 |
+
+### LLVM Category Notes
+
+- `alloc/Vec/String/box runtime`: Allocation, deallocation, raw vector growth, `Vec::from_elem`, and drop paths for owned heap data.
+- `collections runtime`: HashMap/HashSet/hashbrown runtime helpers.
+- `core::panicking::*`: Bounds checks, overflow checks, division/remainder-by-zero checks, and panic paths inserted by Rust semantics.
+- `direct recursion/self-call`: A recursive `f_gold` call still visible in LLVM IR.
+- `formatting traits/runtime`: Formatting argument builders or `Debug`/`Display` trait shims used mostly by printing.
+- `iterator/range/option runtime`: Iterator lowering, range iteration, `nth`, and `Option::unwrap` failure paths.
+- `llvm.* intrinsics`: Compiler intrinsics such as `llvm.lifetime.start/end`, `llvm.assume`, `llvm.memcpy`, and checked-overflow helpers. These are often modeling artifacts rather than source-level library calls.
+- `math helpers/intrinsics`: Calls to `std::f32`/`std::f64` helpers and math LLVM intrinsics when not fully inlined.
+- `other direct calls`: Remaining direct calls that did not match the main buckets; inspect the symbol list below before deciding whether to model or stub.
+- `slice sort runtime`: Calls into Rust slice sorting implementations such as driftsort/insertion sort.
+- `std::io::stdio::_print`: Lowering target for `print!`/`println!`-style output.
+
+## Top LLVM Symbols By Category
+
+### llvm.* intrinsics
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 3071 | `llvm.experimental.noalias.scope.decl` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll` |
+| 1536 | `llvm.assume` | `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1/O1_func.ll`, `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS/O1_func.ll`, `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS/O1_func.ll`, `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS/O1_func.ll` |
+| 1362 | `llvm.lifetime.end.p0` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O1_func.ll`, `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O1_func.ll` |
+| 1321 | `llvm.sadd.with.overflow.i32` | `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll`, `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `c_transcoder/CEILING_IN_A_SORTED_ARRAY/O0_func.ll` |
+| 1237 | `llvm.lifetime.start.p0` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O1_func.ll`, `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O1_func.ll` |
+| 861 | `llvm.ssub.with.overflow.i32` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll` |
+| 830 | `llvm.memcpy.p0.p0.i64` | `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll`, `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll` |
+| 528 | `llvm.smul.with.overflow.i32` | `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `c_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION/O0_func.ll`, `c_transcoder/CIRCLE_LATTICE_POINTS/O0_func.ll`, `c_transcoder/COMPOSITE_NUMBER/O0_func.ll`, `c_transcoder/COMPUTE_N_UNDER_MODULO_P/O0_func.ll` |
+| 478 | `llvm.fptosi.sat.i32.f32` | `c_transcoder/AREA_SQUARE_CIRCUMSCRIBED_CIRCLE/O0_func.ll`, `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/BIRTHDAY_PARADOX/O0_func.ll`, `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION/O0_func.ll` |
+| 364 | `llvm.smax.i32` | `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY/O1_func.ll`, `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY/O1_func.ll`, `c_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM/O1_func.ll`, `c_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1/O1_func.ll`, `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE/O1_func.ll` |
+| 200 | `llvm.smin.i32` | `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION/O1_func.ll`, `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS/O1_func.ll`, `c_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS/O1_func.ll`, `c_transcoder/DICE_THROW_PROBLEM/O1_func.ll`, `c_transcoder/DICE_THROW_PROBLEM/O1_func.ll` |
+| 120 | `llvm.abs.i32` | `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS/O1_func.ll`, `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS/O1_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR/O1_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR/O1_func.ll`, `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS/O1_func.ll` |
+| 91 | `llvm.fptoui.sat.i64.f32` | `c_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1/O0_func.ll`, `c_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1/O0_func.ll`, `c_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1/O0_func.ll`, `c_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1/O0_func.ll`, `c_transcoder/FIND_THE_FIRST_MISSING_NUMBER/O0_func.ll` |
+| 68 | `llvm.umin.i64` | `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1/O1_func.ll`, `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW/O1_func.ll`, `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE/O1_func.ll`, `c_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE/O1_func.ll`, `c_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1/O1_func.ll` |
+| 46 | `llvm.umax.i64` | `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS/O1_func.ll`, `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS/O1_func.ll`, `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS/O1_func.ll` |
+| 45 | `llvm.smax.v4i32` | `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE/O2_func.ll`, `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE/O2_func.ll`, `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE/O2_func.ll`, `c_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE/O2_func.ll`, `c_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE/O2_func.ll` |
+| 35 | `llvm.umul.with.overflow.i32` | `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8/O0_func.ll`, `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8/O0_func.ll`, `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8/O0_func.ll`, `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8/O0_func.ll`, `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8/O0_func.ll` |
+| 34 | `llvm.memset.p0.i64` | `c_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED/O0_func.ll`, `c_transcoder/PROGRAM_TO_CHECK_IF_A_GIVEN_NUMBER_IS_LUCKY_ALL_DIGITS_ARE_DIFFERENT/O0_func.ll`, `cpp_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED/O0_func.ll`, `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1/O1_func.ll`, `c_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C/O1_func.ll` |
+| 32 | `llvm.smin.v4i32` | `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR/O2_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR/O2_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O2_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O2_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O2_func.ll` |
+| 28 | `llvm.vector.reduce.mul.v4i32` | `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER/O2_func.ll`, `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1/O2_func.ll`, `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2/O2_func.ll`, `c_transcoder/DOUBLE_FACTORIAL/O2_func.ll`, `c_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR/O2_func.ll` |
+| ... | 32 more symbols in this category | |
+
+### core::panicking::*
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 1821 | `core::panicking::panic_bounds_check` | `c_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS/O0_func.ll`, `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll`, `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll` |
+| 1145 | `core::panicking::panic_const::panic_const_add_overflow` | `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll`, `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `c_transcoder/CEILING_IN_A_SORTED_ARRAY/O0_func.ll` |
+| 710 | `core::panicking::panic_const::panic_const_sub_overflow` | `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll`, `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll`, `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll` |
+| 588 | `core::panicking::panic_in_cleanup` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O0_func.ll`, `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION/O0_func.ll`, `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1/O0_func.ll`, `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1/O0_func.ll` |
+| 471 | `core::panicking::panic_const::panic_const_mul_overflow` | `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `c_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION/O0_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O0_func.ll`, `c_transcoder/CIRCLE_LATTICE_POINTS/O0_func.ll`, `c_transcoder/COMPOSITE_NUMBER/O0_func.ll` |
+| 267 | `core::panicking::panic_const::panic_const_div_overflow` | `c_transcoder/CEILING_IN_A_SORTED_ARRAY_1/O0_func.ll`, `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT/O0_func.ll`, `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT/O0_func.ll`, `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT/O0_func.ll`, `c_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION/O0_func.ll` |
+| 259 | `core::panicking::panic_const::panic_const_rem_overflow` | `c_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS/O0_func.ll`, `c_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS/O0_func.ll`, `c_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS/O0_func.ll`, `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT/O0_func.ll`, `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT/O0_func.ll` |
+| 234 | `core::panicking::panic_const::panic_const_rem_by_zero` | `c_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS/O0_func.ll`, `c_transcoder/COMPOSITE_NUMBER/O0_func.ll`, `c_transcoder/COMPOSITE_NUMBER/O0_func.ll`, `c_transcoder/COMPUTE_N_UNDER_MODULO_P/O0_func.ll`, `c_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3/O0_func.ll` |
+| 149 | `core::panicking::panic_const::panic_const_div_by_zero` | `c_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION/O0_func.ll`, `c_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3/O0_func.ll`, `c_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3/O0_func.ll`, `c_transcoder/COUNT_NUMBER_PAIRS_N_B_N_GCD_B_B/O0_func.ll`, `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3/O0_func.ll` |
+| 27 | `core::panicking::panic_const::panic_const_shl_overflow` | `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL/O0_func.ll`, `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL/O0_func.ll`, `c_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS_1/O0_func.ll`, `c_transcoder/FIND_VALUE_OF_Y_MOD_2_RAISED_TO_POWER_X/O0_func.ll`, `c_transcoder/HOW_TO_TURN_OFF_A_PARTICULAR_BIT_IN_A_NUMBER/O0_func.ll` |
+| 10 | `core::panicking::panic_const::panic_const_neg_overflow` | `c_transcoder/ADD_1_TO_A_GIVEN_NUMBER_1/O0_func.ll`, `c_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3/O0_func.ll`, `cpp_transcoder/ADD_1_TO_A_GIVEN_NUMBER_1/O0_func.ll`, `cpp_transcoder/DIVISIBILITY_BY_7/O0_func.ll`, `cpp_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_1/O0_func.ll` |
+| 7 | `core::panicking::panic_misaligned_pointer_dereference` | `c_transcoder/TILING_WITH_DOMINOES/O0_func.ll`, `c_transcoder/TILING_WITH_DOMINOES/O0_func.ll`, `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES/O0_func.ll`, `cpp_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1/O0_func.ll`, `cpp_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1/O0_func.ll` |
+| 7 | `core::panicking::panic_null_pointer_dereference` | `c_transcoder/TILING_WITH_DOMINOES/O0_func.ll`, `c_transcoder/TILING_WITH_DOMINOES/O0_func.ll`, `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES/O0_func.ll`, `cpp_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1/O0_func.ll`, `cpp_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1/O0_func.ll` |
+
+### alloc/Vec/String/box runtime
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 752 | `__rustc::__rust_dealloc` | `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O1_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O1_func.ll`, `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1/O1_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O2_func.ll`, `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O2_func.ll` |
+| 285 | `alloc::raw_vec::handle_error` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION/O1_func.ll`, `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1/O1_func.ll`, `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1/O1_func.ll` |
+| 200 | `core::ptr::drop_in_place<alloc::vec::Vec<alloc::vec::Vec<i32>>>` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE/O0_func.ll`, `c_transcoder/COUNT_NUMBER_INCREASING_SUBSEQUENCES_SIZE_K/O0_func.ll`, `c_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING/O0_func.ll`, `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1/O0_func.ll` |
+| 190 | `__rustc::__rust_alloc` | `c_transcoder/TILING_WITH_DOMINOES/O1_func.ll`, `c_transcoder/TILING_WITH_DOMINOES/O1_func.ll`, `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES/O1_func.ll`, `cpp_transcoder/LENGTH_LONGEST_SUB_STRING_CAN_MAKE_REMOVED/O1_func.ll`, `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1/O1_func.ll` |
+| 142 | `alloc::vec::from_elem` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O0_func.ll`, `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION/O0_func.ll`, `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1/O0_func.ll`, `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1/O0_func.ll`, `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1/O0_func.ll` |
+| 141 | `alloc::raw_vec::RawVecInner<A>::try_allocate_in` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION/O1_func.ll`, `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1/O1_func.ll`, `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1/O1_func.ll` |
+| 124 | `__rustc::__rust_alloc_zeroed` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O2_func.ll`, `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION/O2_func.ll`, `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1/O2_func.ll`, `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1/O2_func.ll`, `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE/O2_func.ll` |
+| 104 | `alloc::raw_vec::RawVecInner<A>::deallocate` | `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION/O1_func.ll`, `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1/O1_func.ll`, `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS/O1_func.ll`, `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1/O1_func.ll` |
+| 98 | `core::ptr::drop_in_place<alloc::vec::Vec<i32>>` | `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O0_func.ll`, `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION/O0_func.ll`, `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1/O0_func.ll`, `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1/O0_func.ll`, `c_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S/O0_func.ll` |
+| 90 | `core::ptr::drop_in_place<alloc::string::String>` | `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1/O0_func.ll`, `c_transcoder/REMAINDER_7_LARGE_NUMBERS/O0_func.ll`, `cpp_transcoder/BREAKING_NUMBER_FIRST_PART_INTEGRAL_DIVISION_SECOND_POWER_10/O0_func.ll`, `cpp_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `cpp_transcoder/CALCULATE_SUM_OF_ALL_NUMBERS_PRESENT_IN_A_STRING/O0_func.ll` |
+| 69 | `<alloc::raw_vec::RawVec<T,A> as core::ops::drop::Drop>::drop` | `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1/O1_func.ll`, `c_transcoder/REMAINDER_7_LARGE_NUMBERS/O1_func.ll`, `cpp_transcoder/BREAKING_NUMBER_FIRST_PART_INTEGRAL_DIVISION_SECOND_POWER_10/O1_func.ll`, `cpp_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O1_func.ll`, `cpp_transcoder/CALCULATE_SUM_OF_ALL_NUMBERS_PRESENT_IN_A_STRING/O1_func.ll` |
+| 50 | `<T as alloc::vec::spec_from_elem::SpecFromElem>::from_elem` | `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET/O1_func.ll`, `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1/O1_func.ll`, `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE/O1_func.ll`, `c_transcoder/COUNT_NUMBER_INCREASING_SUBSEQUENCES_SIZE_K/O1_func.ll`, `c_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING/O1_func.ll` |
+| 43 | `alloc::slice::<impl [T]>::sort_by` | `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS/O0_func.ll`, `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0/O0_func.ll`, `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT/O0_func.ll`, `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT/O0_func.ll`, `c_transcoder/MAXIMIZE_SUM_ARRII/O0_func.ll` |
+| 33 | `alloc::slice::<impl [T]>::sort` | `c_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY/O0_func.ll`, `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1/O0_func.ll`, `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY/O0_func.ll`, `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D/O0_func.ll`, `c_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS/O0_func.ll` |
+| 8 | `core::ptr::drop_in_place<alloc::vec::Vec<alloc::vec::Vec<f32>>>` | `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1/O0_func.ll`, `c_transcoder/SUM_BINOMIAL_COEFFICIENTS/O0_func.ll`, `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1/O1_func.ll`, `c_transcoder/SUM_BINOMIAL_COEFFICIENTS/O1_func.ll`, `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1/O2_func.ll` |
+| 7 | `alloc::slice::<impl [T]>::to_vec` | `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O0_func.ll`, `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW/O0_func.ll`, `c_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION/O0_func.ll`, `cpp_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1/O0_func.ll`, `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE/O0_func.ll` |
+| 7 | `core::ptr::drop_in_place<alloc::vec::Vec<f32>>` | `c_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT/O0_func.ll`, `c_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT/O0_func.ll`, `cpp_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S/O0_func.ll`, `cpp_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE/O0_func.ll`, `cpp_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT/O0_func.ll` |
+| 7 | `<alloc::vec::Vec<T,A> as core::ops::index::Index<I>>::index` | `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME/O0_func.ll`, `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME/O0_func.ll`, `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME/O0_func.ll`, `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME/O0_func.ll`, `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES/O0_func.ll` |
+| 6 | `alloc::alloc::handle_alloc_error` | `c_transcoder/TILING_WITH_DOMINOES/O1_func.ll`, `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES/O1_func.ll`, `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1/O1_func.ll`, `c_transcoder/TILING_WITH_DOMINOES/O2_func.ll`, `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES/O2_func.ll` |
+| 5 | `core::ptr::drop_in_place<alloc::vec::Vec<char>>` | `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS/O0_func.ll`, `c_transcoder/LONGEST_COMMON_SUBSTRING_SPACE_OPTIMIZED_DP_SOLUTION/O0_func.ll`, `c_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS/O0_func.ll`, `c_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS/O0_func.ll`, `go_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS/O0_func.ll` |
+| ... | 13 more symbols in this category | |
+
+### iterator/range/option runtime
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 380 | `core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next` | `c_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS/O0_func.ll`, `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll`, `c_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT/O0_func.ll`, `c_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS/O0_func.ll` |
+| 241 | `core::iter::traits::iterator::Iterator::nth` | `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O0_func.ll`, `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O0_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O0_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O0_func.ll`, `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS/O0_func.ll` |
+| 211 | `core::option::unwrap_failed` | `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O0_func.ll`, `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O0_func.ll`, `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8/O0_func.ll`, `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8/O0_func.ll`, `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8/O0_func.ll` |
+| 163 | `<core::str::iter::Chars as core::iter::traits::iterator::Iterator>::advance_by` | `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O2_func.ll`, `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O2_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O2_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O2_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O2_func.ll` |
+| 84 | `core::ops::range::RangeInclusive<Idx>::new` | `c_transcoder/COMPUTE_N_UNDER_MODULO_P/O0_func.ll`, `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1/O0_func.ll`, `c_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1/O0_func.ll`, `c_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS/O0_func.ll`, `c_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B/O0_func.ll` |
+| 84 | `core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::RangeInclusive<A>>::next` | `c_transcoder/COMPUTE_N_UNDER_MODULO_P/O0_func.ll`, `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1/O0_func.ll`, `c_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1/O0_func.ll`, `c_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS/O0_func.ll`, `c_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B/O0_func.ll` |
+| 7 | `<core::str::iter::Chars as core::iter::traits::iterator::Iterator>::next` | `c_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1/O0_func.ll`, `c_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1/O0_func.ll`, `c_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER/O0_func.ll`, `c_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK/O0_func.ll`, `go_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1/O0_func.ll` |
+| 6 | `core::iter::traits::iterator::Iterator::rev` | `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1/O0_func.ll`, `c_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT/O0_func.ll`, `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D/O0_func.ll`, `cpp_transcoder/CHECK_DIVISIBILITY_BINARY_STRING_2K/O0_func.ll`, `cpp_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1/O0_func.ll` |
+| 5 | `<core::iter::adapters::rev::Rev<I> as core::iter::traits::iterator::Iterator>::next` | `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1/O0_func.ll`, `c_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT/O0_func.ll`, `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D/O0_func.ll`, `cpp_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1/O0_func.ll`, `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1/O0_func.ll` |
+| 4 | `core::iter::traits::iterator::Iterator::enumerate` | `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS/O0_func.ll`, `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL/O0_func.ll`, `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1/O0_func.ll`, `go_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL/O0_func.ll` |
+| 4 | `<core::iter::adapters::enumerate::Enumerate<I> as core::iter::traits::iterator::Iterator>::next` | `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS/O0_func.ll`, `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL/O0_func.ll`, `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1/O0_func.ll`, `go_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL/O0_func.ll` |
+| 2 | `<core::ops::range::Range<usize> as core::slice::index::SliceIndex<[T]>>::index_mut` | `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O0_func.ll`, `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O0_func.ll` |
+| 2 | `core::iter::traits::iterator::Iterator::max` | `cpp_transcoder/LARGEST_SUBSEQUENCE_GCD_GREATER_1/O0_func.ll`, `cpp_transcoder/MINIMUM_INCREMENT_K_OPERATIONS_MAKE_ELEMENTS_EQUAL/O0_func.ll` |
+| 1 | `core::iter::traits::iterator::Iterator::skip` | `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll` |
+| 1 | `<core::iter::adapters::skip::Skip<I> as core::iter::traits::iterator::Iterator>::next` | `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll` |
+| 1 | `core::iter::traits::iterator::Iterator::step_by` | `c_transcoder/FIND_LARGEST_PRIME_FACTOR_NUMBER/O0_func.ll` |
+| 1 | `<core::iter::adapters::step_by::StepBy<I> as core::iter::traits::iterator::Iterator>::next` | `c_transcoder/FIND_LARGEST_PRIME_FACTOR_NUMBER/O0_func.ll` |
+| 1 | `<core::iter::adapters::rev::Rev<I> as core::iter::traits::iterator::Iterator>::nth` | `cpp_transcoder/CHECK_DIVISIBILITY_BINARY_STRING_2K/O0_func.ll` |
+| 1 | `core::iter::traits::iterator::Iterator::sum` | `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS/O0_func.ll` |
+| 1 | `<core::slice::iter::Iter<T> as core::iter::traits::iterator::Iterator>::next` | `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS/O0_func.ll` |
+
+### other direct calls
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 483 | `<I as core::iter::traits::collect::IntoIterator>::into_iter` | `c_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS/O0_func.ll`, `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES/O0_func.ll`, `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS/O0_func.ll`, `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `c_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT/O0_func.ll` |
+| 315 | `__rustc::__rust_no_alloc_shim_is_unstable_v2` | `c_transcoder/TILING_WITH_DOMINOES/O1_func.ll`, `c_transcoder/TILING_WITH_DOMINOES/O1_func.ll`, `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES/O1_func.ll`, `cpp_transcoder/LENGTH_LONGEST_SUB_STRING_CAN_MAKE_REMOVED/O1_func.ll`, `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1/O1_func.ll` |
+| 90 | `core::str::<impl str>::chars` | `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O0_func.ll`, `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O0_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O0_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O0_func.ll`, `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS/O0_func.ll` |
+| 50 | `core::num::<impl i32>::abs` | `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR/O0_func.ll`, `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS/O0_func.ll`, `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS/O0_func.ll`, `c_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1/O0_func.ll`, `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT/O0_func.ll` |
+| 36 | `core::str::<impl str>::len` | `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME/O0_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O0_func.ll`, `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS/O0_func.ll`, `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS/O0_func.ll`, `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE/O0_func.ll` |
+| 30 | `core::cmp::Ord::max` | `c_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY/O0_func.ll`, `c_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY/O0_func.ll`, `c_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES/O0_func.ll`, `c_transcoder/MAXIMUM_SUBARRAY_SUM_ARRAY_CREATED_REPEATED_CONCATENATION/O0_func.ll`, `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY/O0_func.ll` |
+| 24 | `core::cmp::Ord::min` | `c_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS/O0_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR/O0_func.ll`, `c_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED/O0_func.ll`, `c_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY/O0_func.ll`, `c_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS/O0_func.ll` |
+| 23 | `bcmp` | `cpp_transcoder/BREAKING_NUMBER_FIRST_PART_INTEGRAL_DIVISION_SECOND_POWER_10/O1_func.ll`, `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS/O1_func.ll`, `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS/O1_func.ll`, `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS/O1_func.ll`, `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS/O1_func.ll` |
+| 10 | `core::f32::<impl f32>::abs` | `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT/O0_func.ll`, `c_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1/O0_func.ll`, `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1/O0_func.ll`, `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1/O0_func.ll`, `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT/O0_func.ll` |
+| 10 | `core::cmp::max` | `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY/O0_func.ll`, `c_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM/O0_func.ll`, `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1/O0_func.ll`, `c_transcoder/MAXIMUM_PRODUCT_SUBARRAY_ADDED_NEGATIVE_PRODUCT_CASE/O0_func.ll`, `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM/O0_func.ll` |
+| 10 | `core::cmp::min` | `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY/O0_func.ll`, `c_transcoder/MAXIMUM_PRODUCT_SUBARRAY_ADDED_NEGATIVE_PRODUCT_CASE/O0_func.ll`, `c_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE/O0_func.ll`, `c_transcoder/MINIMUM_XOR_VALUE_PAIR_1/O0_func.ll`, `cpp_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED/O0_func.ll` |
+| 9 | `max` | `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY/O0_func.ll`, `c_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM/O0_func.ll`, `c_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2/O0_func.ll`, `c_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2/O0_func.ll`, `cpp_transcoder/LARGEST_SUBSEQUENCE_GCD_GREATER_1/O0_func.ll` |
+| 8 | `<core::option::Option<T> as core::cmp::PartialEq>::eq` | `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O0_func.ll`, `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT/O0_func.ll`, `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS/O0_func.ll`, `c_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS/O0_func.ll`, `cpp_transcoder/CHECK_DIVISIBILITY_BINARY_STRING_2K/O0_func.ll` |
+| 7 | `core::slice::<impl [T]>::iter` | `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING/O0_func.ll`, `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL/O0_func.ll`, `cpp_transcoder/LARGEST_SUBSEQUENCE_GCD_GREATER_1/O0_func.ll`, `cpp_transcoder/MINIMUM_INCREMENT_K_OPERATIONS_MAKE_ELEMENTS_EQUAL/O0_func.ll`, `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS/O0_func.ll` |
+| 7 | `core::f32::<impl f32>::min` | `c_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE/O0_func.ll`, `c_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE/O0_func.ll`, `cpp_transcoder/COUNT_OF_SUB_STRINGS_THAT_DO_NOT_CONTAIN_ALL_THE_CHARACTERS_FROM_THE_SET_A_B_C_AT_THE_SAME_TIME/O0_func.ll`, `cpp_transcoder/COUNT_OF_SUB_STRINGS_THAT_DO_NOT_CONTAIN_ALL_THE_CHARACTERS_FROM_THE_SET_A_B_C_AT_THE_SAME_TIME/O0_func.ll`, `cpp_transcoder/COUNT_OF_SUB_STRINGS_THAT_DO_NOT_CONTAIN_ALL_THE_CHARACTERS_FROM_THE_SET_A_B_C_AT_THE_SAME_TIME/O0_func.ll` |
+| 6 | `core::slice::index::slice_index_fail` | `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O1_func.ll`, `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O1_func.ll`, `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O1_func.ll`, `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O1_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O2_func.ll` |
+| 4 | `core::char::methods::<impl char>::to_digit` | `c_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER/O0_func.ll`, `c_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING/O0_func.ll`, `go_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER/O0_func.ll`, `go_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING/O0_func.ll` |
+| 3 | `core::f32::<impl f32>::max` | `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K/O0_func.ll`, `cpp_transcoder/MAXIMUM_EQULIBRIUM_SUM_ARRAY/O0_func.ll`, `go_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K/O0_func.ll` |
+| 2 | `min` | `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS/O0_func.ll`, `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME/O0_func.ll` |
+| 2 | `core::array::<impl core::ops::index::Index<I> for [T; N]>::index` | `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll`, `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll` |
+| ... | 13 more symbols in this category | |
+
+### math helpers/intrinsics
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 78 | `llvm.sqrt.f32` | `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION/O1_func.ll`, `c_transcoder/CIRCLE_LATTICE_POINTS/O1_func.ll`, `c_transcoder/CIRCLE_LATTICE_POINTS/O1_func.ll`, `c_transcoder/CIRCLE_LATTICE_POINTS/O1_func.ll`, `c_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1/O1_func.ll` |
+| 43 | `std::f32::<impl f32>::sqrt` | `c_transcoder/AREA_OF_A_HEXAGON/O0_func.ll`, `c_transcoder/CALCULATE_VOLUME_DODECAHEDRON/O0_func.ll`, `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION/O0_func.ll`, `c_transcoder/CIRCLE_LATTICE_POINTS/O0_func.ll`, `c_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1/O0_func.ll` |
+| 28 | `llvm.floor.f32` | `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1/O1_func.ll`, `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES_1/O1_func.ll`, `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1/O1_func.ll`, `c_transcoder/TRIANGULAR_NUMBERS_1/O1_func.ll`, `c_transcoder/TRIANGULAR_NUMBERS_1/O1_func.ll` |
+| 20 | `llvm.pow.f32` | `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION/O1_func.ll`, `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1/O1_func.ll`, `c_transcoder/NUMBER_TRIANGLES_N_MOVES_1/O1_func.ll`, `c_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES/O1_func.ll`, `c_transcoder/SUM_SERIES_555555_N_TERMS/O1_func.ll` |
+| 16 | `llvm.log10.f32` | `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1/O1_func.ll`, `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1/O1_func.ll`, `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1/O1_func.ll`, `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2/O1_func.ll`, `go_transcoder/COUNT_DIGITS_FACTORIAL_SET_1/O1_func.ll` |
+| 11 | `std::f32::<impl f32>::floor` | `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1/O0_func.ll`, `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES_1/O0_func.ll`, `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1/O0_func.ll`, `c_transcoder/TRIANGULAR_NUMBERS_1/O0_func.ll`, `c_transcoder/TRIANGULAR_NUMBERS_1/O0_func.ll` |
+| 10 | `std::f32::<impl f32>::powf` | `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION/O0_func.ll`, `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1/O0_func.ll`, `c_transcoder/NUMBER_TRIANGLES_N_MOVES_1/O0_func.ll`, `c_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES/O0_func.ll`, `c_transcoder/SUM_SERIES_555555_N_TERMS/O0_func.ll` |
+| 10 | `llvm.powi.f32.i32` | `c_transcoder/CALCULATE_VOLUME_DODECAHEDRON/O1_func.ll`, `c_transcoder/PRIMALITY_TEST_SET_5USING_LUCAS_LEHMER_SERIES/O1_func.ll`, `c_transcoder/SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS/O1_func.ll`, `go_transcoder/CALCULATE_VOLUME_DODECAHEDRON/O1_func.ll`, `go_transcoder/SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS/O1_func.ll` |
+| 8 | `std::f32::<impl f32>::log10` | `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1/O0_func.ll`, `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1/O0_func.ll`, `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1/O0_func.ll`, `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2/O0_func.ll`, `go_transcoder/COUNT_DIGITS_FACTORIAL_SET_1/O0_func.ll` |
+| 8 | `llvm.ceil.f32` | `c_transcoder/BIRTHDAY_PARADOX/O1_func.ll`, `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN/O1_func.ll`, `go_transcoder/BIRTHDAY_PARADOX/O1_func.ll`, `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN/O1_func.ll`, `c_transcoder/BIRTHDAY_PARADOX/O2_func.ll` |
+| 6 | `std::f32::<impl f32>::ln` | `c_transcoder/BIRTHDAY_PARADOX/O0_func.ll`, `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_2/O0_func.ll`, `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_2/O0_func.ll`, `c_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1/O0_func.ll`, `go_transcoder/BIRTHDAY_PARADOX/O0_func.ll` |
+| 6 | `std::f32::<impl f32>::powi` | `c_transcoder/CALCULATE_VOLUME_DODECAHEDRON/O0_func.ll`, `c_transcoder/PRIMALITY_TEST_SET_5USING_LUCAS_LEHMER_SERIES/O0_func.ll`, `c_transcoder/SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS/O0_func.ll`, `cpp_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1/O0_func.ll`, `go_transcoder/CALCULATE_VOLUME_DODECAHEDRON/O0_func.ll` |
+| 4 | `std::f32::<impl f32>::ceil` | `c_transcoder/BIRTHDAY_PARADOX/O0_func.ll`, `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN/O0_func.ll`, `go_transcoder/BIRTHDAY_PARADOX/O0_func.ll`, `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN/O0_func.ll` |
+| 2 | `std::f32::<impl f32>::round` | `c_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1/O0_func.ll`, `go_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1/O0_func.ll` |
+| 2 | `std::f32::<impl f32>::rem_euclid` | `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1/O0_func.ll`, `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1/O0_func.ll` |
+| 1 | `std::f32::<impl f32>::log2` | `c_transcoder/FIND_VALUE_OF_Y_MOD_2_RAISED_TO_POWER_X/O0_func.ll` |
+
+### slice sort runtime
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 108 | `core::slice::sort::stable::driftsort_main` | `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS/O1_func.ll`, `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY/O1_func.ll`, `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1/O1_func.ll`, `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1/O1_func.ll`, `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0/O1_func.ll` |
+| 78 | `core::slice::sort::shared::smallsort::insertion_sort_shift_left` | `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED/O1_func.ll`, `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS/O1_func.ll`, `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY/O1_func.ll`, `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW/O1_func.ll`, `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1/O1_func.ll` |
+
+### direct recursion/self-call
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 169 | `f_gold` | `c_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS/O0_func.ll`, `c_transcoder/CEILING_IN_A_SORTED_ARRAY_1/O0_func.ll`, `c_transcoder/CEILING_IN_A_SORTED_ARRAY_1/O0_func.ll`, `c_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3/O0_func.ll`, `c_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3/O0_func.ll` |
+
+### std::io::stdio::_print
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 39 | `std::io::stdio::_print` | `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll`, `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll`, `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K/O0_func.ll`, `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1/O0_func.ll`, `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM/O0_func.ll` |
+
+### formatting traits/runtime
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 9 | `core::fmt::Arguments::from_str` | `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll`, `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K/O0_func.ll`, `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1/O0_func.ll`, `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM/O0_func.ll`, `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll` |
+| 4 | `core::fmt::Arguments::new` | `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll`, `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM/O0_func.ll`, `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll`, `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll` |
+| 4 | `core::fmt::rt::Argument::new_display` | `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM/O0_func.ll`, `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM/O0_func.ll`, `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll`, `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll` |
+| 2 | `core::fmt::rt::Argument::new_debug` | `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll`, `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S/O0_func.ll` |
+
+### collections runtime
+
+| Calls | Symbol | Example locations |
+|---:|---|---|
+| 5 | `std::collections::hash::map::HashMap<K,V,S>::get` | `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O1_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O1_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O1_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O1_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O1_func.ll` |
+| 5 | `hashbrown::map::HashMap<K,V,S,A>::get` | `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O2_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O2_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O2_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O2_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O2_func.ll` |
+| 2 | `std::sys::random::linux::hashmap_random_keys` | `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O1_func.ll`, `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O2_func.ll` |
+| 2 | `core::ptr::drop_in_place<std::collections::hash::set::HashSet<char>>` | `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1/O1_func.ll`, `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1/O2_func.ll` |
+| 1 | `std::collections::hash::map::HashMap<K,V>::new` | `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O0_func.ll` |
+| 1 | `core::ptr::drop_in_place<std::collections::hash::map::HashMap<i32,i32>>` | `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER/O0_func.ll` |
+| 1 | `hashbrown::map::HashMap<K,V,S,A>::contains_key` | `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1/O1_func.ll` |
+| 1 | `hashbrown::map::HashMap<K,V,S,A>::remove_entry` | `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1/O1_func.ll` |
+
+## Source Benchmark Lists
+
+<details><summary>Vec/String/allocation APIs: 295 benchmarks</summary>
+
+- `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET`
+- `c_transcoder/CHECK_POSSIBLE_TRANSFORM_ONE_STRING_ANOTHER`
+- `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION`
+- `c_transcoder/CONVERT_STRICTLY_INCREASING_ARRAY_MINIMUM_CHANGES`
+- `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1`
+- `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1`
+- `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS`
+- `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1`
+- `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE`
+- `c_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S`
+- `c_transcoder/COUNT_NUMBER_INCREASING_SUBSEQUENCES_SIZE_K`
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1`
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES`
+- `c_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME`
+- `c_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES`
+- `c_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4`
+- `c_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X_2`
+- `c_transcoder/COUNT_PALINDROME_SUB_STRINGS_STRING`
+- `c_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING`
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1`
+- `c_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE`
+- `c_transcoder/COUNT_STRINGS_WITH_CONSECUTIVE_1S`
+- `c_transcoder/COUNT_WAYS_BUILD_STREET_GIVEN_CONSTRAINTS`
+- `c_transcoder/DELANNOY_NUMBER_1`
+- `c_transcoder/DICE_THROW_PROBLEM`
+- `c_transcoder/DICE_THROW_PROBLEM_1`
+- `c_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M`
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1`
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD`
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE`
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_8_MATRIX_CHAIN_MULTIPLICATION_1`
+- `c_transcoder/DYNAMIC_PROGRAMMING_SUBSET_SUM_PROBLEM_1`
+- `c_transcoder/EULERIAN_NUMBER_1`
+- `c_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE`
+- `c_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS`
+- `c_transcoder/FIND_MAXIMUM_DOT_PRODUCT_TWO_ARRAYS_INSERTION_0S`
+- `c_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1`
+- `c_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE`
+- `c_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES`
+- `c_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS`
+- `c_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT`
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM`
+- `c_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1`
+- `c_transcoder/HIGHWAY_BILLBOARD_PROBLEM`
+- `c_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS`
+- `c_transcoder/K_TH_ELEMENT_TWO_SORTED_ARRAYS`
+- `c_transcoder/LCS_FORMED_CONSECUTIVE_SEGMENTS_LEAST_LENGTH_K`
+- `c_transcoder/LENGTH_OF_THE_LONGEST_ARITHMATIC_PROGRESSION_IN_A_SORTED_ARRAY`
+- `c_transcoder/LEONARDO_NUMBER_1`
+- `c_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS`
+- `c_transcoder/LONGEST_COMMON_SUBSTRING_SPACE_OPTIMIZED_DP_SOLUTION`
+- `c_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE`
+- `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1`
+- `c_transcoder/LONGEST_REPEATING_SUBSEQUENCE`
+- `c_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE`
+- `c_transcoder/MAXIMIZE_ARRAY_ELEMENTS_UPTO_GIVEN_NUMBER`
+- `c_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE`
+- `c_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1`
+- `c_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C`
+- `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES`
+- `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1`
+- `c_transcoder/MAXIMUM_SUBSEQUENCE_SUM_SUCH_THAT_NO_THREE_ARE_CONSECUTIVE`
+- `c_transcoder/MAXIMUM_SUM_ALTERNATING_SUBSEQUENCE_SUM`
+- `c_transcoder/MAXIMUM_SUM_BITONIC_SUBARRAY`
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE`
+- `c_transcoder/MAXIMUM_SUM_SUBARRAY_REMOVING_ONE_ELEMENT`
+- `c_transcoder/MAXIMUM_SUM_SUBSEQUENCE_LEAST_K_DISTANT_ELEMENTS`
+- `c_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING`
+- `c_transcoder/MINIMUM_INSERTIONS_SORT_ARRAY`
+- `c_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION`
+- `c_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS`
+- `c_transcoder/MINIMUM_SUM_SUBSEQUENCE_LEAST_ONE_EVERY_FOUR_CONSECUTIVE_ELEMENTS_PICKED`
+- `c_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION`
+- `c_transcoder/NEWMAN_CONWAY_SEQUENCE_1`
+- `c_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS`
+- `c_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS`
+- `c_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH`
+- `c_transcoder/NUMBER_SUBSEQUENCES_STRING_DIVISIBLE_N`
+- `c_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N`
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1`
+- `c_transcoder/REMAINDER_7_LARGE_NUMBERS`
+- `c_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1`
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM`
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1`
+- `c_transcoder/SUBSET_SUM_DIVISIBLE_M`
+- `c_transcoder/SUBSET_SUM_PROBLEM_OSUM_SPACE`
+- `c_transcoder/SUM_BINOMIAL_COEFFICIENTS`
+- `c_transcoder/SUM_FIBONACCI_NUMBERS`
+- `c_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N`
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS`
+- `c_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS`
+- `c_transcoder/TILING_WITH_DOMINOES`
+- `c_transcoder/UGLY_NUMBERS`
+- `c_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED`
+- `c_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS`
+- `c_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS`
+- `cpp_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET`
+- `cpp_transcoder/BREAKING_NUMBER_FIRST_PART_INTEGRAL_DIVISION_SECOND_POWER_10`
+- `cpp_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING`
+- `cpp_transcoder/CALCULATE_SUM_OF_ALL_NUMBERS_PRESENT_IN_A_STRING`
+- `cpp_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP`
+- `cpp_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP_1`
+- `cpp_transcoder/CHECK_ARRAY_CONTAINS_CONTIGUOUS_INTEGERS_DUPLICATES_ALLOWED`
+- `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1`
+- `cpp_transcoder/CHECK_DIVISIBILITY_LARGE_NUMBER_999`
+- `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS`
+- `cpp_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME`
+- `cpp_transcoder/CHECK_IF_A_GIVEN_ARRAY_CAN_REPRESENT_PREORDER_TRAVERSAL_OF_BINARY_SEARCH_TREE`
+- `cpp_transcoder/CHECK_IF_STRING_REMAINS_PALINDROME_AFTER_REMOVING_GIVEN_NUMBER_OF_CHARACTERS`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_13_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_3_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_4_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_6_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_9_NOT`
+- `cpp_transcoder/CHECK_OCCURRENCES_CHARACTER_APPEAR_TOGETHER`
+- `cpp_transcoder/CHECK_POSSIBLE_TRANSFORM_ONE_STRING_ANOTHER`
+- `cpp_transcoder/CHECK_STRING_CAN_OBTAINED_ROTATING_ANOTHER_STRING_2_PLACES`
+- `cpp_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT`
+- `cpp_transcoder/COIN_GAME_WINNER_EVERY_PLAYER_THREE_CHOICES`
+- `cpp_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION`
+- `cpp_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS`
+- `cpp_transcoder/CONVERT_DECIMAL_FRACTION_BINARY_NUMBER`
+- `cpp_transcoder/CONVERT_STRICTLY_INCREASING_ARRAY_MINIMUM_CHANGES`
+- `cpp_transcoder/COST_BALANCE_PARANTHESES`
+- `cpp_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1`
+- `cpp_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1`
+- `cpp_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS`
+- `cpp_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS`
+- `cpp_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1`
+- `cpp_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE`
+- `cpp_transcoder/COUNT_NUMBERS_CAN_CONSTRUCTED_USING_TWO_NUMBERS`
+- `cpp_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S`
+- `cpp_transcoder/COUNT_NUMBER_INCREASING_SUBSEQUENCES_SIZE_K`
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES`
+- `cpp_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME`
+- `cpp_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES`
+- `cpp_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4`
+- `cpp_transcoder/COUNT_OF_OCCURRENCES_OF_A_101_PATTERN_IN_A_STRING`
+- `cpp_transcoder/COUNT_OF_PAIRS_SATISFYING_THE_GIVEN_CONDITION`
+- `cpp_transcoder/COUNT_PALINDROME_SUB_STRINGS_STRING`
+- `cpp_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING`
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1`
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_4`
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_8`
+- `cpp_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE`
+- `cpp_transcoder/COUNT_STRINGS_WITH_CONSECUTIVE_1S`
+- `cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS`
+- `cpp_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS`
+- `cpp_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT`
+- `cpp_transcoder/DECODE_MEDIAN_STRING_ORIGINAL_STRING`
+- `cpp_transcoder/DELANNOY_NUMBER_1`
+- `cpp_transcoder/DICE_THROW_PROBLEM`
+- `cpp_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M`
+- `cpp_transcoder/DIVIDE_LARGE_NUMBER_REPRESENTED_STRING`
+- `cpp_transcoder/DIVISIBILITY_BY_12_FOR_A_LARGE_NUMBER`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_15_LONGEST_BITONIC_SUBSEQUENCE`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_3_LONGEST_INCREASING_SUBSEQUENCE_1`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_8_MATRIX_CHAIN_MULTIPLICATION_1`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SUBSET_SUM_PROBLEM_1`
+- `cpp_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL`
+- `cpp_transcoder/EULERIAN_NUMBER_1`
+- `cpp_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE`
+- `cpp_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS`
+- `cpp_transcoder/FIND_EXPRESSION_DUPLICATE_PARENTHESIS_NOT`
+- `cpp_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH`
+- `cpp_transcoder/FIND_MAXIMUM_DOT_PRODUCT_TWO_ARRAYS_INSERTION_0S`
+- `cpp_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1`
+- `cpp_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE`
+- `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES`
+- `cpp_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1`
+- `cpp_transcoder/FIND_PATTERNS_101_GIVEN_STRING`
+- `cpp_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7`
+- `cpp_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS`
+- `cpp_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT`
+- `cpp_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY`
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES`
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE`
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE_1`
+- `cpp_transcoder/FORM_MINIMUM_NUMBER_FROM_GIVEN_SEQUENCE_1`
+- `cpp_transcoder/FORM_SMALLEST_NUMBER_USING_ONE_SWAP_OPERATION`
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM`
+- `cpp_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1`
+- `cpp_transcoder/GOOGLE_CASE_GIVEN_SENTENCE`
+- `cpp_transcoder/HIGHWAY_BILLBOARD_PROBLEM`
+- `cpp_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER`
+- `cpp_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS`
+- `cpp_transcoder/K_TH_ELEMENT_TWO_SORTED_ARRAYS`
+- `cpp_transcoder/LCS_FORMED_CONSECUTIVE_SEGMENTS_LEAST_LENGTH_K`
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE`
+- `cpp_transcoder/LENGTH_LONGEST_SUB_STRING_CAN_MAKE_REMOVED`
+- `cpp_transcoder/LENGTH_OF_THE_LONGEST_ARITHMATIC_PROGRESSION_IN_A_SORTED_ARRAY`
+- `cpp_transcoder/LEONARDO_NUMBER_1`
+- `cpp_transcoder/LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION`
+- `cpp_transcoder/LEXICOGRAPHICALLY_NEXT_STRING`
+- `cpp_transcoder/LEXICOGRAPHICAL_CONCATENATION_SUBSTRINGS_STRING`
+- `cpp_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS`
+- `cpp_transcoder/LONGEST_COMMON_SUBSTRING_SPACE_OPTIMIZED_DP_SOLUTION`
+- `cpp_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE`
+- `cpp_transcoder/LONGEST_INCREASING_SUBSEQUENCE_1`
+- `cpp_transcoder/LONGEST_PALINDROME_SUBSEQUENCE_SPACE`
+- `cpp_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1`
+- `cpp_transcoder/LONGEST_REPEATED_SUBSEQUENCE_1`
+- `cpp_transcoder/LONGEST_REPEATING_AND_NON_OVERLAPPING_SUBSTRING`
+- `cpp_transcoder/LONGEST_REPEATING_SUBSEQUENCE`
+- `cpp_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE`
+- `cpp_transcoder/MAKE_LARGEST_PALINDROME_CHANGING_K_DIGITS`
+- `cpp_transcoder/MAXIMIZE_ARRAY_ELEMENTS_UPTO_GIVEN_NUMBER`
+- `cpp_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE`
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING`
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1`
+- `cpp_transcoder/MAXIMUM_GAMES_PLAYED_WINNER`
+- `cpp_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1`
+- `cpp_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C`
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES`
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1`
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_TWICE`
+- `cpp_transcoder/MAXIMUM_SUBARRAY_SUM_USING_PREFIX_SUM`
+- `cpp_transcoder/MAXIMUM_SUBSEQUENCE_SUM_SUCH_THAT_NO_THREE_ARE_CONSECUTIVE`
+- `cpp_transcoder/MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY`
+- `cpp_transcoder/MAXIMUM_SUM_ALTERNATING_SUBSEQUENCE_SUM`
+- `cpp_transcoder/MAXIMUM_SUM_BITONIC_SUBARRAY`
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE`
+- `cpp_transcoder/MAXIMUM_SUM_SUBARRAY_REMOVING_ONE_ELEMENT`
+- `cpp_transcoder/MAXIMUM_SUM_SUBSEQUENCE_LEAST_K_DISTANT_ELEMENTS`
+- `cpp_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING`
+- `cpp_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL`
+- `cpp_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME`
+- `cpp_transcoder/MINIMUM_INSERTIONS_SORT_ARRAY`
+- `cpp_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED`
+- `cpp_transcoder/MINIMUM_NUMBER_OF_BRACKET_REVERSALS_NEEDED_TO_MAKE_AN_EXPRESSION_BALANCED`
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_1`
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_2`
+- `cpp_transcoder/MINIMUM_ROTATIONS_REQUIRED_GET_STRING`
+- `cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION`
+- `cpp_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS`
+- `cpp_transcoder/MINIMUM_SUM_SUBSEQUENCE_LEAST_ONE_EVERY_FOUR_CONSECUTIVE_ELEMENTS_PICKED`
+- `cpp_transcoder/MINIMUM_SUM_SUBSEQUENCE_LEAST_ONE_EVERY_FOUR_CONSECUTIVE_ELEMENTS_PICKED_1`
+- `cpp_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION`
+- `cpp_transcoder/MIRROR_CHARACTERS_STRING`
+- `cpp_transcoder/MULTIPLY_LARGE_NUMBERS_REPRESENTED_AS_STRINGS`
+- `cpp_transcoder/NEWMAN_CONWAY_SEQUENCE_1`
+- `cpp_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS`
+- `cpp_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS`
+- `cpp_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH`
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES`
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK`
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_STRING_DIVISIBLE_N`
+- `cpp_transcoder/NUMBER_SUBSTRINGS_STRING`
+- `cpp_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N`
+- `cpp_transcoder/PANGRAM_CHECKING`
+- `cpp_transcoder/PERFECT_REVERSIBLE_STRING`
+- `cpp_transcoder/POLICEMEN_CATCH_THIEVES`
+- `cpp_transcoder/PRINT_A_CLOSEST_STRING_THAT_DOES_NOT_CONTAIN_ADJACENT_DUPLICATES`
+- `cpp_transcoder/PRINT_SHORTEST_COMMON_SUPERSEQUENCE`
+- `cpp_transcoder/PRINT_WORDS_STRING_REVERSE_ORDER`
+- `cpp_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING`
+- `cpp_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION_1`
+- `cpp_transcoder/PROGRAM_CHECK_INPUT_INTEGER_STRING`
+- `cpp_transcoder/PROGRAM_CHECK_ISBN`
+- `cpp_transcoder/PROGRAM_COUNT_OCCURRENCE_GIVEN_CHARACTER_STRING`
+- `cpp_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11`
+- `cpp_transcoder/PROGRAM_FIND_STRING_START_END_GEEKS`
+- `cpp_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING`
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1`
+- `cpp_transcoder/REMAINDER_7_LARGE_NUMBERS`
+- `cpp_transcoder/REPLACE_CHARACTER_C1_C2_C2_C1_STRING_S`
+- `cpp_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1`
+- `cpp_transcoder/SORT_ARRAY_APPLYING_GIVEN_EQUATION`
+- `cpp_transcoder/SORT_EVEN_PLACED_ELEMENTS_INCREASING_ODD_PLACED_DECREASING_ORDER`
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM`
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1`
+- `cpp_transcoder/SPACE_OPTIMIZED_SOLUTION_LCS`
+- `cpp_transcoder/STRING_CONTAINING_FIRST_LETTER_EVERY_WORD_GIVEN_STRING_SPACES`
+- `cpp_transcoder/STRING_K_DISTINCT_CHARACTERS_NO_CHARACTERS_ADJACENT`
+- `cpp_transcoder/SUBSET_SUM_PROBLEM_OSUM_SPACE`
+- `cpp_transcoder/SUM_BINOMIAL_COEFFICIENTS`
+- `cpp_transcoder/SUM_FIBONACCI_NUMBERS`
+- `cpp_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N`
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS`
+- `cpp_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING`
+- `cpp_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS`
+- `cpp_transcoder/SUM_TWO_LARGE_NUMBERS`
+- `cpp_transcoder/SUM_TWO_LARGE_NUMBERS_1`
+- `cpp_transcoder/TILING_WITH_DOMINOES`
+- `cpp_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED`
+- `cpp_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO`
+- `cpp_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS`
+- `cpp_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS`
+- `go_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS`
+- `go_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X_2`
+
+</details>
+
+<details><summary>sort / sort_by: 110 benchmarks</summary>
+
+- `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED`
+- `c_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY`
+- `c_transcoder/CHOCOLATE_DISTRIBUTION_PROBLEM`
+- `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS`
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1`
+- `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY`
+- `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW`
+- `c_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY`
+- `c_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1`
+- `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D`
+- `c_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS`
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1`
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1`
+- `c_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE`
+- `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0`
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1_1`
+- `c_transcoder/FREQUENT_ELEMENT_ARRAY`
+- `c_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED`
+- `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT`
+- `c_transcoder/MAXIMIZE_SUM_ARRII`
+- `c_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY`
+- `c_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1`
+- `c_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME`
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1`
+- `c_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1`
+- `c_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED`
+- `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN`
+- `c_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS`
+- `c_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION`
+- `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS`
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY`
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2`
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR_1`
+- `c_transcoder/POSSIBLE_FORM_TRIANGLE_ARRAY_VALUES`
+- `c_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND`
+- `c_transcoder/SMALLEST_DIFFERENCE_PAIR_VALUES_TWO_UNSORTED_ARRAYS`
+- `cpp_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED`
+- `cpp_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY`
+- `cpp_transcoder/CHOCOLATE_DISTRIBUTION_PROBLEM`
+- `cpp_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS`
+- `cpp_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1`
+- `cpp_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY`
+- `cpp_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW`
+- `cpp_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY`
+- `cpp_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1`
+- `cpp_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D`
+- `cpp_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS`
+- `cpp_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1`
+- `cpp_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1`
+- `cpp_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE`
+- `cpp_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0`
+- `cpp_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1_1`
+- `cpp_transcoder/FREQUENT_ELEMENT_ARRAY`
+- `cpp_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED`
+- `cpp_transcoder/LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION`
+- `cpp_transcoder/LEXICOGRAPHICAL_CONCATENATION_SUBSTRINGS_STRING`
+- `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT`
+- `cpp_transcoder/MAXIMIZE_SUM_ARRII`
+- `cpp_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY`
+- `cpp_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1`
+- `cpp_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME`
+- `cpp_transcoder/MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY`
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE`
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1`
+- `cpp_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1`
+- `cpp_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED`
+- `cpp_transcoder/MINIMIZE_THE_MAXIMUM_DIFFERENCE_BETWEEN_THE_HEIGHTS`
+- `cpp_transcoder/MINIMUM_COST_CUT_BOARD_SQUARES`
+- `cpp_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS`
+- `cpp_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION`
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY`
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2`
+- `cpp_transcoder/MINIMUM_XOR_VALUE_PAIR_1`
+- `cpp_transcoder/PARTITION_INTO_TWO_SUBARRAYS_OF_LENGTHS_K_AND_N_K_SUCH_THAT_THE_DIFFERENCE_OF_SUMS_IS_MAXIMUM`
+- `cpp_transcoder/PERMUTE_TWO_ARRAYS_SUM_EVERY_PAIR_GREATER_EQUAL_K`
+- `cpp_transcoder/POSSIBLE_FORM_TRIANGLE_ARRAY_VALUES`
+- `cpp_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND`
+- `cpp_transcoder/SCHEDULE_ELEVATOR_TO_REDUCE_THE_TOTAL_TIME_TAKEN`
+- `cpp_transcoder/SMALLEST_DIFFERENCE_PAIR_VALUES_TWO_UNSORTED_ARRAYS`
+- `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS`
+- `cpp_transcoder/SORT_ARRAY_TWO_HALVES_SORTED`
+- `cpp_transcoder/SORT_EVEN_NUMBERS_ASCENDING_ORDER_SORT_ODD_NUMBERS_DESCENDING_ORDER_1`
+- `cpp_transcoder/SORT_EVEN_PLACED_ELEMENTS_INCREASING_ODD_PLACED_DECREASING_ORDER`
+- `cpp_transcoder/SUM_AREA_RECTANGLES_POSSIBLE_ARRAY`
+- `go_transcoder/CHOCOLATE_DISTRIBUTION_PROBLEM`
+- `go_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS`
+- `go_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1`
+- `go_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY`
+- `go_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY`
+- `go_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1`
+- `go_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS`
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1`
+- `go_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0`
+- `go_transcoder/FREQUENT_ELEMENT_ARRAY`
+- `go_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT`
+- `go_transcoder/MAXIMIZE_SUM_ARRII`
+- `go_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY`
+- `go_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME`
+- `go_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1`
+- `go_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1`
+- `go_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED`
+- `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN`
+- `go_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS`
+- `go_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION`
+- `go_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS`
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY`
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2`
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR_1`
+- `go_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND`
+- `go_transcoder/SMALLEST_DIFFERENCE_PAIR_VALUES_TWO_UNSORTED_ARRAYS`
+
+</details>
+
+<details><summary>iterator/string APIs: 167 benchmarks</summary>
+
+- `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING`
+- `c_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP_1`
+- `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME`
+- `c_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT`
+- `c_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_3_NOT`
+- `c_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_4_NOT`
+- `c_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_6_NOT`
+- `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT`
+- `c_transcoder/CHECK_WHETHER_GIVEN_DEGREES_VERTICES_REPRESENT_GRAPH_TREE`
+- `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION`
+- `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS`
+- `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS`
+- `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE`
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1`
+- `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8`
+- `c_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS`
+- `c_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT`
+- `c_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M`
+- `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL`
+- `c_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS`
+- `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D`
+- `c_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1`
+- `c_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7`
+- `c_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT`
+- `c_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER`
+- `c_transcoder/LENGTH_OF_THE_LONGEST_ARITHMATIC_PROGRESSION_IN_A_SORTED_ARRAY`
+- `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1`
+- `c_transcoder/MAXIMIZE_ARRAY_ELEMENTS_UPTO_GIVEN_NUMBER`
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING`
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1`
+- `c_transcoder/MAXIMUM_EQULIBRIUM_SUM_ARRAY`
+- `c_transcoder/MAXIMUM_SUM_BITONIC_SUBARRAY`
+- `c_transcoder/MAXIMUM_SUM_SUBARRAY_REMOVING_ONE_ELEMENT`
+- `c_transcoder/MAXIMUM_SUM_SUBSEQUENCE_LEAST_K_DISTANT_ELEMENTS`
+- `c_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME`
+- `c_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED`
+- `c_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION`
+- `c_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS`
+- `c_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS`
+- `c_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES`
+- `c_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK`
+- `c_transcoder/NUMBER_SUBSEQUENCES_STRING_DIVISIBLE_N`
+- `c_transcoder/PERFECT_REVERSIBLE_STRING`
+- `c_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING`
+- `c_transcoder/PROGRAM_CHECK_INPUT_INTEGER_STRING`
+- `c_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11`
+- `c_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING`
+- `c_transcoder/REMAINDER_7_LARGE_NUMBERS`
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1`
+- `c_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING`
+- `c_transcoder/TEMPLE_OFFERINGS`
+- `c_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO`
+- `cpp_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING`
+- `cpp_transcoder/CALCULATE_SUM_OF_ALL_NUMBERS_PRESENT_IN_A_STRING`
+- `cpp_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP`
+- `cpp_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP_1`
+- `cpp_transcoder/CHECK_ARRAY_CONTAINS_CONTIGUOUS_INTEGERS_DUPLICATES_ALLOWED`
+- `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1`
+- `cpp_transcoder/CHECK_DIVISIBILITY_BINARY_STRING_2K`
+- `cpp_transcoder/CHECK_DIVISIBILITY_LARGE_NUMBER_999`
+- `cpp_transcoder/CHECK_GIVEN_SENTENCE_GIVEN_SET_SIMPLE_GRAMMER_RULES`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_13_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_3_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_4_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_6_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_9_NOT`
+- `cpp_transcoder/CHECK_OCCURRENCES_CHARACTER_APPEAR_TOGETHER`
+- `cpp_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT`
+- `cpp_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION`
+- `cpp_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS`
+- `cpp_transcoder/COST_BALANCE_PARANTHESES`
+- `cpp_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS`
+- `cpp_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE`
+- `cpp_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1`
+- `cpp_transcoder/COUNT_OF_OCCURRENCES_OF_A_101_PATTERN_IN_A_STRING`
+- `cpp_transcoder/COUNT_OF_PAIRS_SATISFYING_THE_GIVEN_CONDITION`
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_4`
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_8`
+- `cpp_transcoder/C_PROGRAM_FIND_LARGEST_ELEMENT_ARRAY_1`
+- `cpp_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT`
+- `cpp_transcoder/DECODE_MEDIAN_STRING_ORIGINAL_STRING`
+- `cpp_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M`
+- `cpp_transcoder/DIVISIBILITY_BY_12_FOR_A_LARGE_NUMBER`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_15_LONGEST_BITONIC_SUBSEQUENCE`
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_3_LONGEST_INCREASING_SUBSEQUENCE_1`
+- `cpp_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL`
+- `cpp_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS`
+- `cpp_transcoder/FIND_EXPRESSION_DUPLICATE_PARENTHESIS_NOT`
+- `cpp_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D`
+- `cpp_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1`
+- `cpp_transcoder/FIND_PATTERNS_101_GIVEN_STRING`
+- `cpp_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7`
+- `cpp_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT`
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE`
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE_1`
+- `cpp_transcoder/FORM_MINIMUM_NUMBER_FROM_GIVEN_SEQUENCE_1`
+- `cpp_transcoder/FORM_SMALLEST_NUMBER_USING_ONE_SWAP_OPERATION`
+- `cpp_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1`
+- `cpp_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER`
+- `cpp_transcoder/LARGEST_SUBSEQUENCE_GCD_GREATER_1`
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE`
+- `cpp_transcoder/LENGTH_LONGEST_SUB_STRING_CAN_MAKE_REMOVED`
+- `cpp_transcoder/LENGTH_OF_THE_LONGEST_ARITHMATIC_PROGRESSION_IN_A_SORTED_ARRAY`
+- `cpp_transcoder/LONGEST_INCREASING_SUBSEQUENCE_1`
+- `cpp_transcoder/LONGEST_PALINDROME_SUBSEQUENCE_SPACE`
+- `cpp_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1`
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING`
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1`
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_TWICE`
+- `cpp_transcoder/MAXIMUM_SUM_BITONIC_SUBARRAY`
+- `cpp_transcoder/MAXIMUM_SUM_SUBARRAY_REMOVING_ONE_ELEMENT`
+- `cpp_transcoder/MAXIMUM_SUM_SUBSEQUENCE_LEAST_K_DISTANT_ELEMENTS`
+- `cpp_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL`
+- `cpp_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME`
+- `cpp_transcoder/MINIMUM_INCREMENT_K_OPERATIONS_MAKE_ELEMENTS_EQUAL`
+- `cpp_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED`
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_2`
+- `cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION`
+- `cpp_transcoder/MINIMUM_SUM_SUBSEQUENCE_LEAST_ONE_EVERY_FOUR_CONSECUTIVE_ELEMENTS_PICKED_1`
+- `cpp_transcoder/MIRROR_CHARACTERS_STRING`
+- `cpp_transcoder/MULTIPLY_LARGE_NUMBERS_REPRESENTED_AS_STRINGS`
+- `cpp_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS`
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES`
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK`
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_STRING_DIVISIBLE_N`
+- `cpp_transcoder/NUMBER_SUBSTRINGS_DIVISIBLE_4_STRING_INTEGERS`
+- `cpp_transcoder/PANGRAM_CHECKING`
+- `cpp_transcoder/PERFECT_REVERSIBLE_STRING`
+- `cpp_transcoder/PRINT_SHORTEST_COMMON_SUPERSEQUENCE`
+- `cpp_transcoder/PRINT_WORDS_STRING_REVERSE_ORDER`
+- `cpp_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING`
+- `cpp_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION_1`
+- `cpp_transcoder/PROGRAM_CHECK_INPUT_INTEGER_STRING`
+- `cpp_transcoder/PROGRAM_COUNT_OCCURRENCE_GIVEN_CHARACTER_STRING`
+- `cpp_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11`
+- `cpp_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING`
+- `cpp_transcoder/REMAINDER_7_LARGE_NUMBERS`
+- `cpp_transcoder/REPLACE_CHARACTER_C1_C2_C2_C1_STRING_S`
+- `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS`
+- `cpp_transcoder/SPACE_OPTIMIZED_SOLUTION_LCS`
+- `cpp_transcoder/STRING_CONTAINING_FIRST_LETTER_EVERY_WORD_GIVEN_STRING_SPACES`
+- `cpp_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING`
+- `cpp_transcoder/SUM_TWO_LARGE_NUMBERS_1`
+- `cpp_transcoder/TEMPLE_OFFERINGS`
+- `cpp_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO`
+- `cpp_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS`
+- `go_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP_1`
+- `go_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME`
+- `go_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT`
+- `go_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_3_NOT`
+- `go_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_4_NOT`
+- `go_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT`
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1`
+- `go_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS`
+- `go_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL`
+- `go_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1`
+- `go_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER`
+- `go_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME`
+- `go_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES`
+- `go_transcoder/PERFECT_REVERSIBLE_STRING`
+- `go_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING`
+- `go_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11`
+- `go_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING`
+- `go_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING`
+- `go_transcoder/TEMPLE_OFFERINGS`
+- `go_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO`
+
+</details>
+
+<details><summary>math methods/helpers: 140 benchmarks</summary>
+
+- `c_transcoder/AREA_OF_A_HEXAGON`
+- `c_transcoder/BIRTHDAY_PARADOX`
+- `c_transcoder/CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND`
+- `c_transcoder/CALCULATE_VOLUME_DODECAHEDRON`
+- `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION`
+- `c_transcoder/CHECK_GIVEN_CIRCLE_LIES_COMPLETELY_INSIDE_RING_FORMED_TWO_CONCENTRIC_CIRCLES`
+- `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT`
+- `c_transcoder/CHECK_IF_A_NUMBER_IS_POWER_OF_ANOTHER_NUMBER_1`
+- `c_transcoder/CIRCLE_LATTICE_POINTS`
+- `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS`
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1`
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_2`
+- `c_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1`
+- `c_transcoder/COUNT_NUMBER_OF_OCCURRENCES_OR_FREQUENCY_IN_A_SORTED_ARRAY`
+- `c_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1`
+- `c_transcoder/FIND_HARMONIC_MEAN_USING_ARITHMETIC_MEAN_GEOMETRIC_MEAN`
+- `c_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1`
+- `c_transcoder/FIND_LARGEST_PRIME_FACTOR_NUMBER`
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR`
+- `c_transcoder/FIND_MINIMUM_NUMBER_DIVIDED_MAKE_NUMBER_PERFECT_SQUARE`
+- `c_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS`
+- `c_transcoder/FIND_SUM_EVEN_FACTORS_NUMBER`
+- `c_transcoder/FIND_SUM_ODD_FACTORS_NUMBER`
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS`
+- `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1`
+- `c_transcoder/FIND_VALUE_OF_Y_MOD_2_RAISED_TO_POWER_X`
+- `c_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1`
+- `c_transcoder/K_TH_DIGIT_RAISED_POWER_B`
+- `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT`
+- `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES_1`
+- `c_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1`
+- `c_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY`
+- `c_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1`
+- `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN`
+- `c_transcoder/MINIMUM_PERIMETER_N_BLOCKS`
+- `c_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS`
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS`
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1`
+- `c_transcoder/NUMBER_TRIANGLES_N_MOVES_1`
+- `c_transcoder/NUMBER_UNIQUE_RECTANGLES_FORMED_USING_N_UNIT_SQUARES`
+- `c_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES`
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2`
+- `c_transcoder/PRIMALITY_TEST_SET_5USING_LUCAS_LEHMER_SERIES`
+- `c_transcoder/PROGRAM_CALCULATE_AREA_OCTAGON`
+- `c_transcoder/PROGRAM_CALCULATE_VOLUME_OCTAHEDRON`
+- `c_transcoder/PROGRAM_CHECK_PLUS_PERFECT_NUMBER`
+- `c_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE`
+- `c_transcoder/PROGRAM_FOR_SURFACE_AREA_OF_OCTAHEDRON`
+- `c_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM_1`
+- `c_transcoder/PROGRAM_TO_FIND_THE_AREA_OF_PENTAGON`
+- `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1`
+- `c_transcoder/SMALLEST_DIFFERENCE_PAIR_VALUES_TWO_UNSORTED_ARRAYS`
+- `c_transcoder/SUM_FACTORS_NUMBER`
+- `c_transcoder/SUM_FACTORS_NUMBER_1`
+- `c_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS`
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS`
+- `c_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER`
+- `c_transcoder/SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS`
+- `c_transcoder/SUM_SERIES_555555_N_TERMS`
+- `c_transcoder/TRIANGULAR_NUMBERS_1`
+- `cpp_transcoder/CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND`
+- `cpp_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT`
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_13_NOT`
+- `cpp_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY`
+- `cpp_transcoder/COST_BALANCE_PARANTHESES`
+- `cpp_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS`
+- `cpp_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1`
+- `cpp_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1`
+- `cpp_transcoder/DOUBLE_FACTORIAL_1`
+- `cpp_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1`
+- `cpp_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR`
+- `cpp_transcoder/FIND_MINIMUM_SUM_FACTORS_NUMBER`
+- `cpp_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS`
+- `cpp_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1`
+- `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT`
+- `cpp_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1`
+- `cpp_transcoder/MAXIMUM_NUMBER_CHARACTERS_TWO_CHARACTER_STRING`
+- `cpp_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY`
+- `cpp_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1`
+- `cpp_transcoder/MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY`
+- `cpp_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS`
+- `cpp_transcoder/MODULUS_TWO_FLOAT_DOUBLE_NUMBERS`
+- `cpp_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS`
+- `cpp_transcoder/POLICEMEN_CATCH_THIEVES`
+- `cpp_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE`
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1`
+- `cpp_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K`
+- `cpp_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1`
+- `cpp_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS`
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS`
+- `go_transcoder/AREA_OF_A_HEXAGON`
+- `go_transcoder/BIRTHDAY_PARADOX`
+- `go_transcoder/CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND`
+- `go_transcoder/CALCULATE_VOLUME_DODECAHEDRON`
+- `go_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION`
+- `go_transcoder/CHECK_GIVEN_CIRCLE_LIES_COMPLETELY_INSIDE_RING_FORMED_TWO_CONCENTRIC_CIRCLES`
+- `go_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT`
+- `go_transcoder/CHECK_IF_A_NUMBER_IS_POWER_OF_ANOTHER_NUMBER_1`
+- `go_transcoder/CIRCLE_LATTICE_POINTS`
+- `go_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS`
+- `go_transcoder/COUNT_DIGITS_FACTORIAL_SET_1`
+- `go_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1`
+- `go_transcoder/FIND_HARMONIC_MEAN_USING_ARITHMETIC_MEAN_GEOMETRIC_MEAN`
+- `go_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1`
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR`
+- `go_transcoder/FIND_MINIMUM_NUMBER_DIVIDED_MAKE_NUMBER_PERFECT_SQUARE`
+- `go_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS`
+- `go_transcoder/FIND_SUM_EVEN_FACTORS_NUMBER`
+- `go_transcoder/FIND_SUM_ODD_FACTORS_NUMBER`
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS`
+- `go_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1`
+- `go_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1`
+- `go_transcoder/K_TH_DIGIT_RAISED_POWER_B`
+- `go_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT`
+- `go_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES_1`
+- `go_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY`
+- `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN`
+- `go_transcoder/MINIMUM_PERIMETER_N_BLOCKS`
+- `go_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS`
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS`
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1`
+- `go_transcoder/NUMBER_TRIANGLES_N_MOVES_1`
+- `go_transcoder/NUMBER_UNIQUE_RECTANGLES_FORMED_USING_N_UNIT_SQUARES`
+- `go_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES`
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2`
+- `go_transcoder/PROGRAM_CALCULATE_AREA_OCTAGON`
+- `go_transcoder/PROGRAM_CALCULATE_VOLUME_OCTAHEDRON`
+- `go_transcoder/PROGRAM_CHECK_PLUS_PERFECT_NUMBER`
+- `go_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE`
+- `go_transcoder/PROGRAM_FOR_SURFACE_AREA_OF_OCTAHEDRON`
+- `go_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM_1`
+- `go_transcoder/PROGRAM_TO_FIND_THE_AREA_OF_PENTAGON`
+- `go_transcoder/SMALLEST_DIFFERENCE_PAIR_VALUES_TWO_UNSORTED_ARRAYS`
+- `go_transcoder/SUM_FACTORS_NUMBER`
+- `go_transcoder/SUM_FACTORS_NUMBER_1`
+- `go_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS`
+- `go_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER`
+- `go_transcoder/SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS`
+- `go_transcoder/SUM_SERIES_555555_N_TERMS`
+- `go_transcoder/TRIANGULAR_NUMBERS_1`
+
+</details>
+
+<details><summary>collections: 5 benchmarks</summary>
+
+- `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER`
+- `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1`
+- `cpp_transcoder/COUNT_NATURAL_NUMBERS_WHOSE_PERMUTATION_GREATER_NUMBER`
+- `cpp_transcoder/FIND_EXPRESSION_DUPLICATE_PARENTHESIS_NOT`
+- `cpp_transcoder/MAXIMUM_AREA_RECTANGLE_PICKING_FOUR_SIDES_ARRAY`
+
+</details>
+
+<details><summary>print/output: 14 benchmarks</summary>
+
+- `c_transcoder/CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND`
+- `c_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1`
+- `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S`
+- `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K`
+- `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1`
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM`
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM_1`
+- `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S`
+- `cpp_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K`
+- `cpp_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1`
+- `go_transcoder/CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND`
+- `go_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1`
+- `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S`
+- `go_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K`
+
+</details>
+
+<details><summary>input/stdin: 0 benchmarks</summary>
+
+- None
+
+</details>
+
+<details><summary>file I/O: 0 benchmarks</summary>
+
+- None
+
+</details>
+
+<details><summary>Sources without recoverable f_gold</summary>
+
+- `c_transcoder/CALCULATE_AREA_TETRAHEDRON`
+- `c_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER`
+- `cpp_transcoder/SUBSET_SUM_DIVISIBLE_M`
+- `go_transcoder/CALCULATE_AREA_TETRAHEDRON`
+- `go_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER`
+
+</details>
+
+## LLVM Benchmark Lists By Category
+
+<details><summary>alloc/Vec/String/box runtime: 298 benchmarks in at least one optimization level</summary>
+
+- O0: 296
+- O1: 225
+- O2: 227
+
+- `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET` (O0, O1, O2)
+- `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED` (O0, O1, O2)
+- `c_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY` (O0)
+- `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION` (O0, O1, O2)
+- `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1` (O0, O1, O2)
+- `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1` (O0, O1, O2)
+- `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS` (O0, O1, O2)
+- `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1` (O0, O1, O2)
+- `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0)
+- `c_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_INCREASING_SUBSEQUENCES_SIZE_K` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES` (O0, O1, O2)
+- `c_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4` (O0, O1, O2)
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1` (O0)
+- `c_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING` (O0, O1, O2)
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1` (O0, O1, O2)
+- `c_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE` (O0, O1, O2)
+- `c_transcoder/COUNT_STRINGS_WITH_CONSECUTIVE_1S` (O0, O1, O2)
+- `c_transcoder/COUNT_WAYS_BUILD_STREET_GIVEN_CONSTRAINTS` (O0, O1, O2)
+- `c_transcoder/DELANNOY_NUMBER_1` (O0, O1, O2)
+- `c_transcoder/DICE_THROW_PROBLEM` (O0, O1, O2)
+- `c_transcoder/DICE_THROW_PROBLEM_1` (O0, O1, O2)
+- `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0)
+- `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW` (O0, O1, O2)
+- `c_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_8_MATRIX_CHAIN_MULTIPLICATION_1` (O0, O1, O2)
+- `c_transcoder/EULERIAN_NUMBER_1` (O0, O1, O2)
+- `c_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE` (O0, O1, O2)
+- `c_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O0, O1, O2)
+- `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D` (O0)
+- `c_transcoder/FIND_MAXIMUM_DOT_PRODUCT_TWO_ARRAYS_INSERTION_0S` (O0, O1, O2)
+- `c_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O0)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0)
+- `c_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1` (O0, O1, O2)
+- `c_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE` (O0, O1, O2)
+- `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `c_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES` (O0, O1, O2)
+- `c_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `c_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT` (O0, O1, O2)
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1_1` (O0)
+- `c_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM` (O0, O1, O2)
+- `c_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1` (O0, O1, O2)
+- `c_transcoder/HIGHWAY_BILLBOARD_PROBLEM` (O0, O1, O2)
+- `c_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS` (O0, O1, O2)
+- `c_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0)
+- `c_transcoder/LENGTH_OF_THE_LONGEST_ARITHMATIC_PROGRESSION_IN_A_SORTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/LEONARDO_NUMBER_1` (O0, O1, O2)
+- `c_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS` (O0, O1)
+- `c_transcoder/LONGEST_COMMON_SUBSTRING_SPACE_OPTIMIZED_DP_SOLUTION` (O0, O1, O2)
+- `c_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O0, O1, O2)
+- `c_transcoder/LONGEST_REPEATING_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE` (O0, O1, O2)
+- `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `c_transcoder/MAXIMIZE_ARRAY_ELEMENTS_UPTO_GIVEN_NUMBER` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `c_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0)
+- `c_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER` (O1, O2)
+- `c_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1` (O0)
+- `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `c_transcoder/MAXIMUM_SUM_BITONIC_SUBARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0)
+- `c_transcoder/MAXIMUM_SUM_SUBARRAY_REMOVING_ONE_ELEMENT` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_SUBSEQUENCE_LEAST_K_DISTANT_ELEMENTS` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0)
+- `c_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING` (O0, O1, O2)
+- `c_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0)
+- `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0)
+- `c_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `c_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1, O2)
+- `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0)
+- `c_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION` (O0, O1, O2)
+- `c_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `c_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION` (O0, O1, O2)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0)
+- `c_transcoder/NEWMAN_CONWAY_SEQUENCE_1` (O0, O1, O2)
+- `c_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS` (O0, O1, O2)
+- `c_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS` (O0, O1, O2)
+- `c_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH` (O0, O1, O2)
+- `c_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N` (O0, O1, O2)
+- `c_transcoder/POSSIBLE_FORM_TRIANGLE_ARRAY_VALUES` (O0)
+- `c_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND` (O0)
+- `c_transcoder/PROGRAM_CHECK_INPUT_INTEGER_STRING` (O0)
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O0, O1, O2)
+- `c_transcoder/REMAINDER_7_LARGE_NUMBERS` (O0, O1, O2)
+- `c_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1` (O0, O1, O2)
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM` (O0, O1, O2)
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1` (O0, O1, O2)
+- `c_transcoder/SUM_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `c_transcoder/SUM_FIBONACCI_NUMBERS` (O0, O1, O2)
+- `c_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N` (O0, O1, O2)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS` (O0, O1, O2)
+- `c_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `c_transcoder/TILING_WITH_DOMINOES` (O0, O1, O2)
+- `c_transcoder/UGLY_NUMBERS` (O0, O1, O2)
+- `c_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED` (O0, O1, O2)
+- `c_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS` (O0, O1, O2)
+- `c_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O0, O1, O2)
+- `cpp_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET` (O0, O1, O2)
+- `cpp_transcoder/BREAKING_NUMBER_FIRST_PART_INTEGRAL_DIVISION_SECOND_POWER_10` (O0, O1, O2)
+- `cpp_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING` (O0, O1, O2)
+- `cpp_transcoder/CALCULATE_SUM_OF_ALL_NUMBERS_PRESENT_IN_A_STRING` (O0, O1, O2)
+- `cpp_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP` (O0, O1, O2)
+- `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1` (O0, O1, O2)
+- `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS` (O0, O1, O2)
+- `cpp_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O0, O1, O2)
+- `cpp_transcoder/CHECK_IF_STRING_REMAINS_PALINDROME_AFTER_REMOVING_GIVEN_NUMBER_OF_CHARACTERS` (O0, O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_13_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_6_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_9_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_OCCURRENCES_CHARACTER_APPEAR_TOGETHER` (O0, O1, O2)
+- `cpp_transcoder/CHECK_STRING_CAN_OBTAINED_ROTATING_ANOTHER_STRING_2_PLACES` (O0, O1, O2)
+- `cpp_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0, O1, O2)
+- `cpp_transcoder/COIN_GAME_WINNER_EVERY_PLAYER_THREE_CHOICES` (O0, O1, O2)
+- `cpp_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION` (O0, O1, O2)
+- `cpp_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS` (O0, O1, O2)
+- `cpp_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1` (O0, O1, O2)
+- `cpp_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS` (O0, O1, O2)
+- `cpp_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NATURAL_NUMBERS_WHOSE_PERMUTATION_GREATER_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES` (O0, O1, O2)
+- `cpp_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4` (O0, O1, O2)
+- `cpp_transcoder/COUNT_OF_OCCURRENCES_OF_A_101_PATTERN_IN_A_STRING` (O0, O1, O2)
+- `cpp_transcoder/COUNT_OF_PAIRS_SATISFYING_THE_GIVEN_CONDITION` (O0, O1, O2)
+- `cpp_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING` (O0, O1, O2)
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_4` (O0, O1, O2)
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_8` (O0, O1, O2)
+- `cpp_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE` (O0, O1, O2)
+- `cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS` (O0, O1, O2)
+- `cpp_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0, O1, O2)
+- `cpp_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT` (O0, O1, O2)
+- `cpp_transcoder/DECODE_MEDIAN_STRING_ORIGINAL_STRING` (O0, O1, O2)
+- `cpp_transcoder/DELANNOY_NUMBER_1` (O0, O1, O2)
+- `cpp_transcoder/DICE_THROW_PROBLEM` (O0, O1, O2)
+- `cpp_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M` (O0, O1, O2)
+- `cpp_transcoder/DIVIDE_LARGE_NUMBER_REPRESENTED_STRING` (O0, O1, O2)
+- `cpp_transcoder/DIVISIBILITY_BY_12_FOR_A_LARGE_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_15_LONGEST_BITONIC_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME` (O0)
+- `cpp_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0, O1, O2)
+- `cpp_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY` (O0)
+- `cpp_transcoder/EULERIAN_NUMBER_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE` (O0, O1, O2)
+- `cpp_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O0, O1, O2)
+- `cpp_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O0)
+- `cpp_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE` (O0, O1, O2)
+- `cpp_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES` (O0, O1, O2)
+- `cpp_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_PATTERNS_101_GIVEN_STRING` (O0, O1, O2)
+- `cpp_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7` (O0, O1, O2)
+- `cpp_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE` (O0, O1, O2)
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE_1` (O0, O1, O2)
+- `cpp_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM` (O0, O1, O2)
+- `cpp_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1` (O0, O1, O2)
+- `cpp_transcoder/HIGHWAY_BILLBOARD_PROBLEM` (O0, O1, O2)
+- `cpp_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS` (O0, O1, O2)
+- `cpp_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/LENGTH_LONGEST_SUB_STRING_CAN_MAKE_REMOVED` (O0, O1, O2)
+- `cpp_transcoder/LEONARDO_NUMBER_1` (O0, O1, O2)
+- `cpp_transcoder/LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION` (O0, O1, O2)
+- `cpp_transcoder/LEXICOGRAPHICAL_CONCATENATION_SUBSTRINGS_STRING` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_PALINDROME_SUBSEQUENCE_SPACE` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE` (O0, O1, O2)
+- `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `cpp_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `cpp_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_TWICE` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `cpp_transcoder/MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_ALTERNATING_SUBSEQUENCE_SUM` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0)
+- `cpp_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING` (O0, O1, O2)
+- `cpp_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL` (O0, O1, O2)
+- `cpp_transcoder/MINIMIZE_THE_MAXIMUM_DIFFERENCE_BETWEEN_THE_HEIGHTS` (O0)
+- `cpp_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `cpp_transcoder/MINIMUM_INSERTIONS_SORT_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_1` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_2` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_ROTATIONS_REQUIRED_GET_STRING` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `cpp_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION` (O0, O1, O2)
+- `cpp_transcoder/NEWMAN_CONWAY_SEQUENCE_1` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_STRING_DIVISIBLE_N` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_SUBSTRINGS_STRING` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N` (O0, O1, O2)
+- `cpp_transcoder/PARTITION_INTO_TWO_SUBARRAYS_OF_LENGTHS_K_AND_N_K_SUCH_THAT_THE_DIFFERENCE_OF_SUMS_IS_MAXIMUM` (O0)
+- `cpp_transcoder/PERFECT_REVERSIBLE_STRING` (O0, O1, O2)
+- `cpp_transcoder/PERMUTE_TWO_ARRAYS_SUM_EVERY_PAIR_GREATER_EQUAL_K` (O0)
+- `cpp_transcoder/POLICEMEN_CATCH_THIEVES` (O0, O1, O2)
+- `cpp_transcoder/PRINT_WORDS_STRING_REVERSE_ORDER` (O0, O2)
+- `cpp_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION_1` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_CHECK_INPUT_INTEGER_STRING` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_COUNT_OCCURRENCE_GIVEN_CHARACTER_STRING` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_FIND_STRING_START_END_GEEKS` (O0, O1, O2)
+- `cpp_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O0, O1, O2)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O0, O1, O2)
+- `cpp_transcoder/REMAINDER_7_LARGE_NUMBERS` (O0, O1, O2)
+- `cpp_transcoder/REPLACE_CHARACTER_C1_C2_C2_C1_STRING_S` (O2)
+- `cpp_transcoder/SCHEDULE_ELEVATOR_TO_REDUCE_THE_TOTAL_TIME_TAKEN` (O0)
+- `cpp_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1` (O0, O1, O2)
+- `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS` (O0)
+- `cpp_transcoder/SORT_EVEN_PLACED_ELEMENTS_INCREASING_ODD_PLACED_DECREASING_ORDER` (O0, O1, O2)
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM` (O0, O1, O2)
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1` (O0, O1, O2)
+- `cpp_transcoder/SPACE_OPTIMIZED_SOLUTION_LCS` (O0, O1, O2)
+- `cpp_transcoder/STRING_CONTAINING_FIRST_LETTER_EVERY_WORD_GIVEN_STRING_SPACES` (O0, O1, O2)
+- `cpp_transcoder/STRING_K_DISTINCT_CHARACTERS_NO_CHARACTERS_ADJACENT` (O0, O2)
+- `cpp_transcoder/SUM_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `cpp_transcoder/SUM_FIBONACCI_NUMBERS` (O0, O1, O2)
+- `cpp_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N` (O0, O1, O2)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS` (O0, O1, O2)
+- `cpp_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `cpp_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `cpp_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED` (O0, O1, O2)
+- `cpp_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0, O1, O2)
+- `cpp_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS` (O0, O1, O2)
+- `cpp_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O0, O1, O2)
+- `go_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS` (O0, O1, O2)
+- `go_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0)
+- `go_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1` (O0)
+- `go_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0)
+- `go_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0)
+- `go_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `go_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `go_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `go_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `go_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0)
+- `go_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `go_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0)
+- `go_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0)
+- `go_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0)
+- `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0)
+- `go_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `go_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1, O2)
+- `go_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0)
+- `go_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND` (O0)
+
+</details>
+
+<details><summary>collections runtime: 2 benchmarks in at least one optimization level</summary>
+
+- O0: 1
+- O1: 2
+- O2: 2
+
+- `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER` (O0, O1, O2)
+- `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1` (O1, O2)
+
+</details>
+
+<details><summary>core::panicking::*: 975 benchmarks in at least one optimization level</summary>
+
+- O0: 975
+- O1: 586
+- O2: 395
+
+- `c_transcoder/ADD_1_TO_A_GIVEN_NUMBER_1` (O0)
+- `c_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0, O1, O2)
+- `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0, O1, O2)
+- `c_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS` (O0, O1, O2)
+- `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET` (O0, O1)
+- `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0, O1, O2)
+- `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING` (O0, O1, O2)
+- `c_transcoder/CEILING_IN_A_SORTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0, O1, O2)
+- `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O0)
+- `c_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0, O1, O2)
+- `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O0)
+- `c_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0, O1, O2)
+- `c_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION` (O0, O1, O2)
+- `c_transcoder/CHECK_NUMBER_IS_PERFECT_SQUARE_USING_ADDITIONSUBTRACTION` (O0)
+- `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED` (O0, O1)
+- `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0)
+- `c_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY` (O0, O1, O2)
+- `c_transcoder/CHECK_WHETHER_TRIANGLE_VALID_NOT_SIDES_GIVEN` (O0)
+- `c_transcoder/CIRCLE_LATTICE_POINTS` (O0)
+- `c_transcoder/COMPOSITE_NUMBER` (O0, O1, O2)
+- `c_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW` (O0)
+- `c_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW_1` (O0)
+- `c_transcoder/COMPUTE_MODULUS_DIVISION_BY_A_POWER_OF_2_NUMBER` (O0)
+- `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION` (O0, O1, O2)
+- `c_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0, O1, O2)
+- `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS` (O0)
+- `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1` (O0, O1)
+- `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1` (O0, O1)
+- `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS` (O0)
+- `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS` (O0, O1)
+- `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1` (O0, O1, O2)
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0)
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_2` (O0)
+- `c_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2` (O0)
+- `c_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0)
+- `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O0, O1)
+- `c_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `c_transcoder/COUNT_FACTORIAL_NUMBERS_IN_A_GIVEN_RANGE` (O0)
+- `c_transcoder/COUNT_FIBONACCI_NUMBERS_GIVEN_RANGE_LOG_TIME` (O0)
+- `c_transcoder/COUNT_FREQUENCY_K_MATRIX_SIZE_N_MATRIXI_J_IJ` (O0)
+- `c_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0, O1, O2)
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY` (O0, O1, O2)
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_INCREASING_SUBSEQUENCES_SIZE_K` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_PAIRS_N_B_N_GCD_B_B` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES` (O0, O1, O2)
+- `c_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0)
+- `c_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4` (O0, O1, O2)
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K` (O0, O1, O2)
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1` (O0, O1, O2)
+- `c_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0, O1, O2)
+- `c_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0, O1, O2)
+- `c_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING` (O0, O1)
+- `c_transcoder/COUNT_POSSIBLE_GROUPS_SIZE_2_3_SUM_MULTIPLE_3` (O0, O1, O2)
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1` (O0, O1)
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0, O1, O2)
+- `c_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8` (O0)
+- `c_transcoder/COUNT_SET_BITS_IN_AN_INTEGER` (O0)
+- `c_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `c_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `c_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE` (O0, O1)
+- `c_transcoder/COUNT_STRINGS_CAN_FORMED_USING_B_C_GIVEN_CONSTRAINTS_1` (O0)
+- `c_transcoder/COUNT_STRINGS_WITH_CONSECUTIVE_1S` (O0, O1)
+- `c_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0)
+- `c_transcoder/COUNT_TRAILING_ZEROES_FACTORIAL_NUMBER` (O0, O1, O2)
+- `c_transcoder/COUNT_WAYS_BUILD_STREET_GIVEN_CONSTRAINTS` (O0, O1)
+- `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0)
+- `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1` (O0)
+- `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0)
+- `c_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT` (O0, O1, O2)
+- `c_transcoder/DELANNOY_NUMBER_1` (O0, O1)
+- `c_transcoder/DICE_THROW_PROBLEM` (O0, O1)
+- `c_transcoder/DICE_THROW_PROBLEM_1` (O0, O1)
+- `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0, O1, O2)
+- `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW` (O0, O1)
+- `c_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M` (O0, O1)
+- `c_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0, O1, O2)
+- `c_transcoder/DISTRIBUTING_M_ITEMS_CIRCLE_SIZE_N_STARTING_K_TH_POSITION` (O0, O1, O2)
+- `c_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `c_transcoder/DOUBLE_FACTORIAL` (O0)
+- `c_transcoder/DOUBLE_FACTORIAL_1` (O0)
+- `c_transcoder/DYCK_PATH` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1` (O0, O1)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD` (O0, O1)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE` (O0, O1)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_8_MATRIX_CHAIN_MULTIPLICATION_1` (O0, O1)
+- `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0)
+- `c_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1` (O0, O1, O2)
+- `c_transcoder/EFFICIENT_WAY_TO_MULTIPLY_WITH_7` (O0)
+- `c_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY` (O0, O1, O2)
+- `c_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/EULERIAN_NUMBER_1` (O0, O1)
+- `c_transcoder/EULERS_CRITERION_CHECK_IF_SQUARE_ROOT_UNDER_MODULO_P_EXISTS` (O0, O1, O2)
+- `c_transcoder/FIBONACCI_MODULO_P` (O0, O1, O2)
+- `c_transcoder/FINDING_POWER_PRIME_NUMBER_P_N` (O0, O1, O2)
+- `c_transcoder/FINDING_POWER_PRIME_NUMBER_P_N_1` (O0, O1, O2)
+- `c_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE` (O0, O1)
+- `c_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O0, O1)
+- `c_transcoder/FIND_FIRST_NATURAL_NUMBER_WHOSE_FACTORIAL_DIVISIBLE_X` (O0)
+- `c_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME` (O0)
+- `c_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D` (O0, O1, O2)
+- `c_transcoder/FIND_LARGEST_PRIME_FACTOR_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B` (O0)
+- `c_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0, O1, O2)
+- `c_transcoder/FIND_MAXIMUM_DOT_PRODUCT_TWO_ARRAYS_INSERTION_0S` (O0, O1)
+- `c_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0, O1, O2)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY` (O0, O1, O2)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR` (O0, O1, O2)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0, O1, O2)
+- `c_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1` (O0, O1)
+- `c_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE` (O0, O1)
+- `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0, O1, O2)
+- `c_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `c_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES` (O0, O1, O2)
+- `c_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0, O1, O2)
+- `c_transcoder/FIND_PATTERNS_101_GIVEN_STRING` (O0, O1, O2)
+- `c_transcoder/FIND_PERIMETER_CYLINDER` (O0)
+- `c_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7` (O0, O1, O2)
+- `c_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0, O1, O2)
+- `c_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0, O1, O2)
+- `c_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS` (O0, O1)
+- `c_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS_1` (O0)
+- `c_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER_1` (O0, O1, O2)
+- `c_transcoder/FIND_SUM_ODD_FACTORS_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT` (O0, O1, O2)
+- `c_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0, O1, O2)
+- `c_transcoder/FIND_THE_FIRST_MISSING_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS_1` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MISSING_NUMBER_1` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MISSING_NUMBER_2` (O0, O1, O2)
+- `c_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0, O1, O2)
+- `c_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0, O1, O2)
+- `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1` (O0)
+- `c_transcoder/FIND_VALUE_OF_Y_MOD_2_RAISED_TO_POWER_X` (O0)
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1` (O0, O1, O2)
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1_1` (O0, O1, O2)
+- `c_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE` (O0)
+- `c_transcoder/FLOOR_IN_A_SORTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/FREQUENT_ELEMENT_ARRAY` (O0, O1, O2)
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM` (O0, O1)
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `c_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM` (O0, O1, O2)
+- `c_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM_1` (O0, O1, O2)
+- `c_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1` (O0, O1)
+- `c_transcoder/HEIGHT_COMPLETE_BINARY_TREE_HEAP_N_NODES` (O0)
+- `c_transcoder/HEXAGONAL_NUMBER` (O0)
+- `c_transcoder/HIGHWAY_BILLBOARD_PROBLEM` (O0, O1)
+- `c_transcoder/HORNERS_METHOD_POLYNOMIAL_EVALUATION` (O0, O1, O2)
+- `c_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0, O1, O2)
+- `c_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1` (O0, O1, O2)
+- `c_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1, O2)
+- `c_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS` (O0, O1)
+- `c_transcoder/HOW_TO_TURN_OFF_A_PARTICULAR_BIT_IN_A_NUMBER` (O0)
+- `c_transcoder/HYPERCUBE_GRAPH` (O0)
+- `c_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0, O1, O2)
+- `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `c_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2` (O0, O1, O2)
+- `c_transcoder/LENGTH_OF_THE_LONGEST_ARITHMATIC_PROGRESSION_IN_A_SORTED_ARRAY` (O0, O1)
+- `c_transcoder/LEONARDO_NUMBER_1` (O0, O1)
+- `c_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS` (O0, O1)
+- `c_transcoder/LONGEST_COMMON_SUBSTRING_SPACE_OPTIMIZED_DP_SOLUTION` (O0, O1)
+- `c_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE` (O0, O1)
+- `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O0, O1)
+- `c_transcoder/LONGEST_REPEATING_SUBSEQUENCE` (O0, O1)
+- `c_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE` (O0, O1)
+- `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_ARRAY_ELEMENTS_UPTO_GIVEN_NUMBER` (O0, O1)
+- `c_transcoder/MAXIMIZE_SUM_ARRII` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `c_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES_1` (O0)
+- `c_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE` (O0, O1)
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING` (O0)
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1` (O0)
+- `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER` (O0)
+- `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES` (O0)
+- `c_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1` (O0, O1)
+- `c_transcoder/MAXIMUM_NUMBER_2X2_SQUARES_CAN_FIT_INSIDE_RIGHT_ISOSCELES_TRIANGLE` (O0)
+- `c_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_POINTS_INTERSECTION_N_CIRCLES` (O0)
+- `c_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_PRODUCT_SUBARRAY_ADDED_NEGATIVE_PRODUCT_CASE` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1` (O0, O1)
+- `c_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUBARRAY_SUM_ARRAY_CREATED_REPEATED_CONCATENATION` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_BITONIC_SUBARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_SUBARRAY_REMOVING_ONE_ELEMENT` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_SUBSEQUENCE_LEAST_K_DISTANT_ELEMENTS` (O0, O1)
+- `c_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING` (O0, O1, O2)
+- `c_transcoder/MIDDLE_OF_THREE_USING_MINIMUM_COMPARISONS_2` (O0)
+- `c_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL` (O0, O1, O2)
+- `c_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0, O1, O2)
+- `c_transcoder/MINIMIZE_THE_SUM_OF_DIGITS_OF_A_AND_B_SUCH_THAT_A_B_N` (O0)
+- `c_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O0)
+- `c_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0, O1, O2)
+- `c_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED` (O0, O1, O2)
+- `c_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE` (O0, O1, O2)
+- `c_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1)
+- `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0, O1, O2)
+- `c_transcoder/MINIMUM_PERIMETER_N_BLOCKS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_PRODUCT_SUBSET_ARRAY` (O0, O1, O2)
+- `c_transcoder/MINIMUM_ROTATIONS_UNLOCK_CIRCULAR_LOCK` (O0)
+- `c_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION` (O0, O1)
+- `c_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O0, O1)
+- `c_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0, O1, O2)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0, O1, O2)
+- `c_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE` (O0, O1, O2)
+- `c_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION` (O0, O1)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0, O1, O2)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0, O1, O2)
+- `c_transcoder/MODULAR_EXPONENTIATION_POWER_IN_MODULAR_ARITHMETIC` (O0, O1, O2)
+- `c_transcoder/MULTIPLY_AN_INTEGER_WITH_3_5` (O0)
+- `c_transcoder/MULTIPLY_LARGE_INTEGERS_UNDER_LARGE_MODULO` (O0, O1, O2)
+- `c_transcoder/NEWMAN_CONWAY_SEQUENCE_1` (O0, O1, O2)
+- `c_transcoder/NEXT_POWER_OF_2` (O0)
+- `c_transcoder/NEXT_POWER_OF_2_2` (O0)
+- `c_transcoder/NON_REPEATING_ELEMENT` (O0, O1, O2)
+- `c_transcoder/NTH_NON_FIBONACCI_NUMBER` (O0)
+- `c_transcoder/NTH_PENTAGONAL_NUMBER` (O0)
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0)
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1` (O0)
+- `c_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0, O1, O2)
+- `c_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0, O1, O2)
+- `c_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `c_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N_1` (O0)
+- `c_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS` (O0, O1)
+- `c_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS` (O0, O1)
+- `c_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH` (O0, O1, O2)
+- `c_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0, O1, O2)
+- `c_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0)
+- `c_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0, O1, O2)
+- `c_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0)
+- `c_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK` (O0)
+- `c_transcoder/NUMBER_SUBSTRINGS_STRING` (O0)
+- `c_transcoder/NUMBER_TRIANGLES_N_MOVES_1` (O0)
+- `c_transcoder/NUMBER_UNIQUE_RECTANGLES_FORMED_USING_N_UNIT_SQUARES` (O0)
+- `c_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES` (O0)
+- `c_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N` (O0, O1)
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN` (O0)
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1` (O0)
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2` (O0)
+- `c_transcoder/N_TH_TERM_SERIES_2_12_36_80_150` (O0)
+- `c_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0)
+- `c_transcoder/PADOVAN_SEQUENCE` (O0)
+- `c_transcoder/PAINTING_FENCE_ALGORITHM` (O0)
+- `c_transcoder/PAIR_WITH_GIVEN_PRODUCT_SET_1_FIND_IF_ANY_PAIR_EXISTS` (O0, O1, O2)
+- `c_transcoder/PERFECT_REVERSIBLE_STRING` (O0)
+- `c_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `c_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0, O1, O2)
+- `c_transcoder/POSITION_OF_RIGHTMOST_SET_BIT_1` (O0)
+- `c_transcoder/POSSIBLE_FORM_TRIANGLE_ARRAY_VALUES` (O0, O1, O2)
+- `c_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `c_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD_1` (O0, O1, O2)
+- `c_transcoder/PRIMALITY_TEST_SET_5USING_LUCAS_LEHMER_SERIES` (O0, O1, O2)
+- `c_transcoder/PRIME_NUMBERS` (O0)
+- `c_transcoder/PROBABILITY_THREE_RANDOMLY_CHOSEN_NUMBERS_AP` (O0)
+- `c_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND` (O0, O1, O2)
+- `c_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND_1` (O0, O1, O2)
+- `c_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0)
+- `c_transcoder/PROGRAM_AREA_SQUARE` (O0)
+- `c_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION` (O0)
+- `c_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE_1` (O0, O1, O2)
+- `c_transcoder/PROGRAM_CHECK_INPUT_INTEGER_STRING` (O0, O1, O2)
+- `c_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0)
+- `c_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE` (O0, O1, O2)
+- `c_transcoder/PROGRAM_FOR_DEADLOCK_FREE_CONDITION_IN_OPERATING_SYSTEM` (O0)
+- `c_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `c_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0)
+- `c_transcoder/PROGRAM_OCTAL_DECIMAL_CONVERSION` (O0)
+- `c_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `c_transcoder/PROGRAM_TO_CHECK_IF_A_GIVEN_NUMBER_IS_LUCKY_ALL_DIGITS_ARE_DIFFERENT` (O0, O1, O2)
+- `c_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_2` (O0)
+- `c_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE` (O0)
+- `c_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE_1` (O0)
+- `c_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0, O1, O2)
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0)
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O0, O1, O2)
+- `c_transcoder/REMAINDER_7_LARGE_NUMBERS` (O0, O1)
+- `c_transcoder/REMOVE_MINIMUM_ELEMENTS_EITHER_SIDE_2MIN_MAX` (O0, O1, O2)
+- `c_transcoder/ROUND_THE_GIVEN_NUMBER_TO_NEAREST_MULTIPLE_OF_10` (O0)
+- `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+- `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0, O1, O2)
+- `c_transcoder/SEARCH_INSERT_AND_DELETE_IN_AN_UNSORTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/SEARCH_INSERT_AND_DELETE_IN_A_SORTED_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1` (O0, O1)
+- `c_transcoder/SIZE_SUBARRAY_MAXIMUM_SUM` (O0, O1, O2)
+- `c_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS` (O0)
+- `c_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS_1` (O0, O1, O2)
+- `c_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N` (O0)
+- `c_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_1` (O0)
+- `c_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_2` (O0)
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM` (O0, O1)
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1` (O0, O1)
+- `c_transcoder/SQUARED_TRIANGULAR_NUMBER_SUM_CUBES` (O0)
+- `c_transcoder/SQUARE_PYRAMIDAL_NUMBER_SUM_SQUARES` (O0)
+- `c_transcoder/SQUARE_ROOT_OF_AN_INTEGER` (O0)
+- `c_transcoder/SQUARE_ROOT_OF_AN_INTEGER_1` (O0)
+- `c_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0)
+- `c_transcoder/SUBSEQUENCES_SIZE_THREE_ARRAY_WHOSE_SUM_DIVISIBLE_M` (O0, O1, O2)
+- `c_transcoder/SUM_BINOMIAL_COEFFICIENTS` (O0, O1)
+- `c_transcoder/SUM_BINOMIAL_COEFFICIENTS_1` (O0)
+- `c_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `c_transcoder/SUM_FACTORS_NUMBER` (O0)
+- `c_transcoder/SUM_FIBONACCI_NUMBERS` (O0, O1)
+- `c_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS` (O0)
+- `c_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS_1` (O0)
+- `c_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N` (O0, O1)
+- `c_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS` (O0, O1, O2)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS` (O0, O1)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_2` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN_1` (O0)
+- `c_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0)
+- `c_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE` (O0)
+- `c_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE_1` (O0)
+- `c_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0)
+- `c_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `c_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `c_transcoder/SUM_SERIES_ALTERNATE_SIGNED_SQUARES_AP` (O0, O1, O2)
+- `c_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS` (O0, O1)
+- `c_transcoder/TAIL_RECURSION` (O0)
+- `c_transcoder/TILING_WITH_DOMINOES` (O0, O1)
+- `c_transcoder/TRIANGULAR_MATCHSTICK_NUMBER` (O0)
+- `c_transcoder/TRIANGULAR_NUMBERS` (O0)
+- `c_transcoder/TRIANGULAR_NUMBERS_1` (O0)
+- `c_transcoder/TURN_OFF_THE_RIGHTMOST_SET_BIT` (O0)
+- `c_transcoder/UGLY_NUMBERS` (O0, O1)
+- `c_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED` (O0, O1)
+- `c_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0)
+- `c_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS` (O0, O1, O2)
+- `c_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O0, O1)
+- `c_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0)
+- `c_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+- `c_transcoder/ZECKENDORFS_THEOREM_NON_NEIGHBOURING_FIBONACCI_REPRESENTATION` (O0)
+- `cpp_transcoder/ADD_1_TO_A_GIVEN_NUMBER_1` (O0)
+- `cpp_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0, O1, O2)
+- `cpp_transcoder/AREA_SQUARE_CIRCUMSCRIBED_CIRCLE` (O0)
+- `cpp_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0, O1, O2)
+- `cpp_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS` (O0, O1, O2)
+- `cpp_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET` (O0, O1)
+- `cpp_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0, O1, O2)
+- `cpp_transcoder/BREAKING_NUMBER_FIRST_PART_INTEGRAL_DIVISION_SECOND_POWER_10` (O0, O1)
+- `cpp_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING` (O0, O1)
+- `cpp_transcoder/CALCULATE_SUM_OF_ALL_NUMBERS_PRESENT_IN_A_STRING` (O0, O1)
+- `cpp_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0, O1, O2)
+- `cpp_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP` (O0, O1)
+- `cpp_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1` (O0, O1)
+- `cpp_transcoder/CHECK_DIVISIBILITY_BINARY_STRING_2K` (O0)
+- `cpp_transcoder/CHECK_GIVEN_SENTENCE_GIVEN_SET_SIMPLE_GRAMMER_RULES` (O0)
+- `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS` (O0, O1)
+- `cpp_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O0, O1)
+- `cpp_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0, O1, O2)
+- `cpp_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O0)
+- `cpp_transcoder/CHECK_IF_STRING_REMAINS_PALINDROME_AFTER_REMOVING_GIVEN_NUMBER_OF_CHARACTERS` (O0, O1)
+- `cpp_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0, O1, O2)
+- `cpp_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION` (O0, O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT` (O0, O1)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_13_NOT` (O0, O1)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_6_NOT` (O0, O1)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_9_NOT` (O0, O1)
+- `cpp_transcoder/CHECK_NUMBER_IS_PERFECT_SQUARE_USING_ADDITIONSUBTRACTION` (O0)
+- `cpp_transcoder/CHECK_OCCURRENCES_CHARACTER_APPEAR_TOGETHER` (O0, O1)
+- `cpp_transcoder/CHECK_STRING_CAN_OBTAINED_ROTATING_ANOTHER_STRING_2_PLACES` (O0, O1)
+- `cpp_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0, O1)
+- `cpp_transcoder/CHECK_WHETHER_GIVEN_NUMBER_EVEN_ODD` (O0)
+- `cpp_transcoder/CHECK_WHETHER_TRIANGLE_VALID_NOT_SIDES_GIVEN` (O0)
+- `cpp_transcoder/COIN_GAME_WINNER_EVERY_PLAYER_THREE_CHOICES` (O0, O1, O2)
+- `cpp_transcoder/COMPOSITE_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW` (O0)
+- `cpp_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW_1` (O0)
+- `cpp_transcoder/COMPUTE_MODULUS_DIVISION_BY_A_POWER_OF_2_NUMBER` (O0)
+- `cpp_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION` (O0, O1, O2)
+- `cpp_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0, O1, O2)
+- `cpp_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS` (O0, O1)
+- `cpp_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1` (O0, O1)
+- `cpp_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1` (O0, O1)
+- `cpp_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS` (O0, O1)
+- `cpp_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2` (O0)
+- `cpp_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0)
+- `cpp_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O0, O1)
+- `cpp_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `cpp_transcoder/COUNT_FIBONACCI_NUMBERS_GIVEN_RANGE_LOG_TIME` (O0)
+- `cpp_transcoder/COUNT_FREQUENCY_K_MATRIX_SIZE_N_MATRIXI_J_IJ` (O0)
+- `cpp_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NATURAL_NUMBERS_WHOSE_PERMUTATION_GREATER_NUMBER` (O0, O1)
+- `cpp_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_OF_OCCURRENCES_OR_FREQUENCY_IN_A_SORTED_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES` (O0, O1)
+- `cpp_transcoder/COUNT_NUMBER_PAIRS_N_B_N_GCD_B_B` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES` (O0, O1, O2)
+- `cpp_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0)
+- `cpp_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4` (O0, O1)
+- `cpp_transcoder/COUNT_OF_OCCURRENCES_OF_A_101_PATTERN_IN_A_STRING` (O0, O1)
+- `cpp_transcoder/COUNT_OF_PAIRS_SATISFYING_THE_GIVEN_CONDITION` (O0, O1)
+- `cpp_transcoder/COUNT_OF_SUB_STRINGS_THAT_DO_NOT_CONTAIN_ALL_THE_CHARACTERS_FROM_THE_SET_A_B_C_AT_THE_SAME_TIME` (O0, O1, O2)
+- `cpp_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0, O1, O2)
+- `cpp_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X_2` (O0, O1, O2)
+- `cpp_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING` (O0, O1)
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1` (O0, O1)
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0, O1, O2)
+- `cpp_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_4` (O0, O1)
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_8` (O0, O1)
+- `cpp_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `cpp_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `cpp_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE` (O0, O1)
+- `cpp_transcoder/COUNT_STRINGS_CAN_FORMED_USING_B_C_GIVEN_CONSTRAINTS_1` (O0)
+- `cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS` (O0, O1, O2)
+- `cpp_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0, O1)
+- `cpp_transcoder/COUNT_TOTAL_SET_BITS_IN_ALL_NUMBERS_FROM_1_TO_N` (O0)
+- `cpp_transcoder/COUNT_TRAILING_ZEROES_FACTORIAL_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1` (O0)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0)
+- `cpp_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT` (O0, O1)
+- `cpp_transcoder/DECODE_MEDIAN_STRING_ORIGINAL_STRING` (O0, O1)
+- `cpp_transcoder/DELANNOY_NUMBER_1` (O0, O1)
+- `cpp_transcoder/DICE_THROW_PROBLEM` (O0, O1)
+- `cpp_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M` (O0, O1)
+- `cpp_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0, O1, O2)
+- `cpp_transcoder/DISTRIBUTING_M_ITEMS_CIRCLE_SIZE_N_STARTING_K_TH_POSITION` (O0, O1, O2)
+- `cpp_transcoder/DIVIDE_LARGE_NUMBER_REPRESENTED_STRING` (O0, O1)
+- `cpp_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `cpp_transcoder/DIVISIBILITY_BY_12_FOR_A_LARGE_NUMBER` (O0, O1)
+- `cpp_transcoder/DIVISIBILITY_BY_7` (O0)
+- `cpp_transcoder/DOUBLE_FACTORIAL` (O0)
+- `cpp_transcoder/DOUBLE_FACTORIAL_1` (O0)
+- `cpp_transcoder/DYCK_PATH` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1` (O0, O1)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD` (O0, O1)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_15_LONGEST_BITONIC_SUBSEQUENCE` (O0, O1)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_36_CUT_A_ROPE_TO_MAXIMIZE_PRODUCT_1` (O0)
+- `cpp_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0, O1)
+- `cpp_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1` (O0, O1, O2)
+- `cpp_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0, O1, O2)
+- `cpp_transcoder/EULERIAN_NUMBER_1` (O0, O1)
+- `cpp_transcoder/EULERS_CRITERION_CHECK_IF_SQUARE_ROOT_UNDER_MODULO_P_EXISTS` (O0, O1, O2)
+- `cpp_transcoder/FAST_MULTIPLICATION_METHOD_WITHOUT_USING_MULTIPLICATION_OPERATOR_RUSSIAN_PEASANTS_ALGORITHM` (O0)
+- `cpp_transcoder/FIBONACCI_MODULO_P` (O0, O1, O2)
+- `cpp_transcoder/FINDING_POWER_PRIME_NUMBER_P_N` (O0, O1, O2)
+- `cpp_transcoder/FINDING_POWER_PRIME_NUMBER_P_N_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_A_FIXED_POINT_IN_A_GIVEN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE` (O0, O1)
+- `cpp_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1` (O0, O1)
+- `cpp_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O0, O1)
+- `cpp_transcoder/FIND_FIRST_NATURAL_NUMBER_WHOSE_FACTORIAL_DIVISIBLE_X` (O0)
+- `cpp_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME` (O0)
+- `cpp_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0, O1, O2)
+- `cpp_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1` (O0, O1)
+- `cpp_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE` (O0, O1)
+- `cpp_transcoder/FIND_MINIMUM_SUM_FACTORS_NUMBER` (O0)
+- `cpp_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0, O1, O2)
+- `cpp_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES` (O0, O1)
+- `cpp_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O0, O1)
+- `cpp_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FIND_PATTERNS_101_GIVEN_STRING` (O0, O1)
+- `cpp_transcoder/FIND_PERIMETER_CYLINDER` (O0)
+- `cpp_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7` (O0, O1)
+- `cpp_transcoder/FIND_REPEATING_ELEMENT_SORTED_ARRAY_SIZE_N` (O0, O1, O2)
+- `cpp_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0, O1, O2)
+- `cpp_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM` (O0, O1, O2)
+- `cpp_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS` (O0, O1)
+- `cpp_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS_1` (O0)
+- `cpp_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_MAXIMUM_ELEMENT_IN_AN_ARRAY_WHICH_IS_FIRST_INCREASING_AND_THEN_DECREASING` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY` (O0, O1)
+- `cpp_transcoder/FIND_THE_MISSING_NUMBER_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_MISSING_NUMBER_2` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0, O1, O2)
+- `cpp_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `cpp_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1` (O0)
+- `cpp_transcoder/FIND_WHETHER_A_GIVEN_NUMBER_IS_A_POWER_OF_4_OR_NOT_1` (O0)
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE` (O0, O1)
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE_1` (O0, O1)
+- `cpp_transcoder/FLOOR_IN_A_SORTED_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FREQUENT_ELEMENT_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM` (O0, O1)
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `cpp_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM` (O0, O1, O2)
+- `cpp_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM_1` (O0, O1, O2)
+- `cpp_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1` (O0, O1)
+- `cpp_transcoder/GIVEN_TWO_STRINGS_FIND_FIRST_STRING_SUBSEQUENCE_SECOND` (O0, O1, O2)
+- `cpp_transcoder/GIVEN_TWO_STRINGS_FIND_FIRST_STRING_SUBSEQUENCE_SECOND_1` (O0, O1, O2)
+- `cpp_transcoder/GOOGLE_CASE_GIVEN_SENTENCE` (O0)
+- `cpp_transcoder/HEXAGONAL_NUMBER` (O0)
+- `cpp_transcoder/HIGHWAY_BILLBOARD_PROBLEM` (O0, O1)
+- `cpp_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0, O1, O2)
+- `cpp_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1)
+- `cpp_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS` (O0, O1)
+- `cpp_transcoder/HOW_TO_TURN_OFF_A_PARTICULAR_BIT_IN_A_NUMBER` (O0)
+- `cpp_transcoder/HYPERCUBE_GRAPH` (O0)
+- `cpp_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0, O1, O2)
+- `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `cpp_transcoder/LARGEST_SUBSEQUENCE_GCD_GREATER_1` (O0, O1, O2)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE_1` (O0, O1, O2)
+- `cpp_transcoder/LENGTH_LONGEST_SUB_STRING_CAN_MAKE_REMOVED` (O0, O1)
+- `cpp_transcoder/LEONARDO_NUMBER_1` (O0, O1)
+- `cpp_transcoder/LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION` (O0, O1)
+- `cpp_transcoder/LEXICOGRAPHICAL_CONCATENATION_SUBSTRINGS_STRING` (O0, O1)
+- `cpp_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS` (O0, O1)
+- `cpp_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE` (O0, O1)
+- `cpp_transcoder/LONGEST_PALINDROME_SUBSEQUENCE_SPACE` (O0, O1)
+- `cpp_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O0, O1)
+- `cpp_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE` (O0, O1)
+- `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0, O1, O2)
+- `cpp_transcoder/MAXIMIZE_SUM_ARRII` (O0, O1, O2)
+- `cpp_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `cpp_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES_1` (O0)
+- `cpp_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE` (O0, O1)
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING` (O0, O1)
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1` (O0, O1)
+- `cpp_transcoder/MAXIMUM_EQULIBRIUM_SUM_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1` (O0, O1)
+- `cpp_transcoder/MAXIMUM_NUMBER_2X2_SQUARES_CAN_FIT_INSIDE_RIGHT_ISOSCELES_TRIANGLE` (O0)
+- `cpp_transcoder/MAXIMUM_NUMBER_OF_SQUARES_THAT_CAN_BE_FIT_IN_A_RIGHT_ANGLE_ISOSCELES_TRIANGLE` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_POINTS_INTERSECTION_N_CIRCLES` (O0)
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES` (O0, O1)
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_TWICE` (O0, O1)
+- `cpp_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY` (O0, O1)
+- `cpp_transcoder/MAXIMUM_SUM_ALTERNATING_SUBSEQUENCE_SUM` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O0, O1)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING` (O0, O1, O2)
+- `cpp_transcoder/MIDDLE_OF_THREE_USING_MINIMUM_COMPARISONS_2` (O0)
+- `cpp_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL` (O0, O1)
+- `cpp_transcoder/MINIMIZE_THE_MAXIMUM_DIFFERENCE_BETWEEN_THE_HEIGHTS` (O0, O1, O2)
+- `cpp_transcoder/MINIMIZE_THE_SUM_OF_DIGITS_OF_A_AND_B_SUCH_THAT_A_B_N` (O0)
+- `cpp_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O0, O1)
+- `cpp_transcoder/MINIMUM_COST_MAKE_ARRAY_SIZE_1_REMOVING_LARGER_PAIRS` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_INCREMENT_K_OPERATIONS_MAKE_ELEMENTS_EQUAL` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_INSERTIONS_SORT_ARRAY` (O0, O1)
+- `cpp_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED` (O0, O1)
+- `cpp_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_1` (O0, O1)
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_2` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1)
+- `cpp_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_ROTATIONS_REQUIRED_GET_STRING` (O0, O1)
+- `cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION` (O0, O1)
+- `cpp_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O0, O1)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION` (O0, O1)
+- `cpp_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0, O1, O2)
+- `cpp_transcoder/MIN_FLIPS_OF_CONTINUOUS_CHARACTERS_TO_MAKE_ALL_CHARACTERS_SAME_IN_A_STRING` (O0, O1, O2)
+- `cpp_transcoder/MODULAR_EXPONENTIATION_POWER_IN_MODULAR_ARITHMETIC` (O0, O1, O2)
+- `cpp_transcoder/MULTIPLY_AN_INTEGER_WITH_3_5` (O0)
+- `cpp_transcoder/MULTIPLY_LARGE_INTEGERS_UNDER_LARGE_MODULO` (O0, O1, O2)
+- `cpp_transcoder/NEWMAN_CONWAY_SEQUENCE_1` (O0, O1, O2)
+- `cpp_transcoder/NEXT_POWER_OF_2` (O0)
+- `cpp_transcoder/NEXT_POWER_OF_2_1` (O0)
+- `cpp_transcoder/NEXT_POWER_OF_2_2` (O0)
+- `cpp_transcoder/NTH_NON_FIBONACCI_NUMBER` (O0)
+- `cpp_transcoder/NTH_PENTAGONAL_NUMBER` (O0)
+- `cpp_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0)
+- `cpp_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `cpp_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N_1` (O0)
+- `cpp_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS` (O0, O1)
+- `cpp_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS` (O0, O1)
+- `cpp_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0)
+- `cpp_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_RECTANGLES_NM_GRID` (O0)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0, O1)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK` (O0, O1)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_STRING_DIVISIBLE_N` (O0, O1)
+- `cpp_transcoder/NUMBER_SUBSTRINGS_DIVISIBLE_4_STRING_INTEGERS` (O0)
+- `cpp_transcoder/NUMBER_SUBSTRINGS_STRING` (O0, O1)
+- `cpp_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N` (O0, O1)
+- `cpp_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN` (O0)
+- `cpp_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1` (O0)
+- `cpp_transcoder/N_TH_TERM_SERIES_2_12_36_80_150` (O0)
+- `cpp_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0)
+- `cpp_transcoder/PADOVAN_SEQUENCE` (O0)
+- `cpp_transcoder/PAPER_CUT_MINIMUM_NUMBER_SQUARES` (O0)
+- `cpp_transcoder/PARTITION_INTO_TWO_SUBARRAYS_OF_LENGTHS_K_AND_N_K_SUCH_THAT_THE_DIFFERENCE_OF_SUMS_IS_MAXIMUM` (O0, O1, O2)
+- `cpp_transcoder/PERFECT_REVERSIBLE_STRING` (O0, O1)
+- `cpp_transcoder/PERMUTE_TWO_ARRAYS_SUM_EVERY_PAIR_GREATER_EQUAL_K` (O0, O1, O2)
+- `cpp_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `cpp_transcoder/POLICEMEN_CATCH_THIEVES` (O0, O1)
+- `cpp_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0, O1, O2)
+- `cpp_transcoder/POSITION_OF_RIGHTMOST_SET_BIT_1` (O0)
+- `cpp_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `cpp_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD_1` (O0, O1, O2)
+- `cpp_transcoder/PRIME_NUMBERS` (O0)
+- `cpp_transcoder/PRINT_WORDS_STRING_REVERSE_ORDER` (O0, O1)
+- `cpp_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1)
+- `cpp_transcoder/PROGRAM_AREA_SQUARE` (O0)
+- `cpp_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION` (O0)
+- `cpp_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION_1` (O0, O1)
+- `cpp_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_CHECK_INPUT_INTEGER_STRING` (O0, O1)
+- `cpp_transcoder/PROGRAM_COUNT_OCCURRENCE_GIVEN_CHARACTER_STRING` (O0, O1)
+- `cpp_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0, O1)
+- `cpp_transcoder/PROGRAM_FIND_STRING_START_END_GEEKS` (O0, O1)
+- `cpp_transcoder/PROGRAM_FOR_DEADLOCK_FREE_CONDITION_IN_OPERATING_SYSTEM` (O0)
+- `cpp_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER` (O0)
+- `cpp_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `cpp_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0)
+- `cpp_transcoder/PROGRAM_OCTAL_DECIMAL_CONVERSION` (O0)
+- `cpp_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `cpp_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_1` (O0)
+- `cpp_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_2` (O0)
+- `cpp_transcoder/PYTHAGOREAN_QUADRUPLE` (O0)
+- `cpp_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE` (O0)
+- `cpp_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE_1` (O0)
+- `cpp_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0, O1, O2)
+- `cpp_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O0, O1)
+- `cpp_transcoder/REARRANGE_ARRAY_MAXIMUM_MINIMUM_FORM_SET_2_O1_EXTRA_SPACE` (O0, O1, O2)
+- `cpp_transcoder/REARRANGE_ARRAY_MAXIMUM_MINIMUM_FORM_SET_2_O1_EXTRA_SPACE_1` (O0, O1, O2)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O0, O1)
+- `cpp_transcoder/RECURSIVE_C_PROGRAM_LINEARLY_SEARCH_ELEMENT_GIVEN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/RECURSIVE_PROGRAM_PRIME_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/REMAINDER_7_LARGE_NUMBERS` (O0, O1)
+- `cpp_transcoder/REMOVE_MINIMUM_ELEMENTS_EITHER_SIDE_2MIN_MAX` (O0, O1, O2)
+- `cpp_transcoder/REPLACE_CHARACTER_C1_C2_C2_C1_STRING_S` (O0, O1)
+- `cpp_transcoder/ROUND_THE_GIVEN_NUMBER_TO_NEAREST_MULTIPLE_OF_10` (O0)
+- `cpp_transcoder/SCHEDULE_ELEVATOR_TO_REDUCE_THE_TOTAL_TIME_TAKEN` (O0, O1, O2)
+- `cpp_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+- `cpp_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0, O1, O2)
+- `cpp_transcoder/SEARCH_INSERT_AND_DELETE_IN_AN_UNSORTED_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS` (O0)
+- `cpp_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1` (O0, O1)
+- `cpp_transcoder/SIZE_SUBARRAY_MAXIMUM_SUM` (O0, O1, O2)
+- `cpp_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS` (O0)
+- `cpp_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS_1` (O0, O1, O2)
+- `cpp_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_1` (O0)
+- `cpp_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_2` (O0)
+- `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS` (O0)
+- `cpp_transcoder/SORT_ARRAY_CONTAIN_1_N_VALUES` (O0, O1, O2)
+- `cpp_transcoder/SORT_EVEN_PLACED_ELEMENTS_INCREASING_ODD_PLACED_DECREASING_ORDER` (O0, O1)
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM` (O0, O1)
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1` (O0, O1)
+- `cpp_transcoder/SPACE_OPTIMIZED_SOLUTION_LCS` (O0, O1)
+- `cpp_transcoder/SPLIT_N_MAXIMUM_COMPOSITE_NUMBERS` (O0)
+- `cpp_transcoder/SQUARED_TRIANGULAR_NUMBER_SUM_CUBES` (O0)
+- `cpp_transcoder/SQUARE_PYRAMIDAL_NUMBER_SUM_SQUARES` (O0)
+- `cpp_transcoder/SQUARE_ROOT_OF_AN_INTEGER` (O0)
+- `cpp_transcoder/SQUARE_ROOT_OF_AN_INTEGER_1` (O0)
+- `cpp_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0)
+- `cpp_transcoder/STRING_CONTAINING_FIRST_LETTER_EVERY_WORD_GIVEN_STRING_SPACES` (O0, O1)
+- `cpp_transcoder/STRING_K_DISTINCT_CHARACTERS_NO_CHARACTERS_ADJACENT` (O0, O1)
+- `cpp_transcoder/SUM_BINOMIAL_COEFFICIENTS` (O0, O1)
+- `cpp_transcoder/SUM_BINOMIAL_COEFFICIENTS_1` (O0)
+- `cpp_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `cpp_transcoder/SUM_FIBONACCI_NUMBERS` (O0, O1)
+- `cpp_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS` (O0)
+- `cpp_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS_1` (O0)
+- `cpp_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N` (O0, O1)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS` (O0, O1)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_2` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN_1` (O0)
+- `cpp_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1)
+- `cpp_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE` (O0)
+- `cpp_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE_1` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS_2` (O0)
+- `cpp_transcoder/SUM_SERIES_12_32_52_2N_12` (O0)
+- `cpp_transcoder/SUM_SERIES_12_32_52_2N_12_1` (O0)
+- `cpp_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS` (O0, O1)
+- `cpp_transcoder/TAIL_RECURSION` (O0)
+- `cpp_transcoder/TAIL_RECURSION_FIBONACCI` (O0)
+- `cpp_transcoder/TOTAL_NUMBER_OF_NON_DECREASING_NUMBERS_WITH_N_DIGITS_1` (O0)
+- `cpp_transcoder/TRIANGULAR_MATCHSTICK_NUMBER` (O0)
+- `cpp_transcoder/TRIANGULAR_NUMBERS` (O0)
+- `cpp_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED` (O0, O1)
+- `cpp_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0, O1)
+- `cpp_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS` (O0, O1, O2)
+- `cpp_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O0, O1)
+- `cpp_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0)
+- `cpp_transcoder/WRITE_ONE_LINE_C_FUNCTION_TO_FIND_WHETHER_A_NO_IS_POWER_OF_TWO` (O0)
+- `cpp_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+- `cpp_transcoder/ZECKENDORFS_THEOREM_NON_NEIGHBOURING_FIBONACCI_REPRESENTATION` (O0)
+- `go_transcoder/ADD_1_TO_A_GIVEN_NUMBER_1` (O0)
+- `go_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0, O1, O2)
+- `go_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0, O1, O2)
+- `go_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS` (O0, O1, O2)
+- `go_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0, O1, O2)
+- `go_transcoder/CEILING_IN_A_SORTED_ARRAY` (O0, O1, O2)
+- `go_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0, O1, O2)
+- `go_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O0)
+- `go_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0, O1, O2)
+- `go_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O0)
+- `go_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0, O1, O2)
+- `go_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION` (O0, O1, O2)
+- `go_transcoder/CHECK_NUMBER_IS_PERFECT_SQUARE_USING_ADDITIONSUBTRACTION` (O0)
+- `go_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0)
+- `go_transcoder/CHECK_WHETHER_TRIANGLE_VALID_NOT_SIDES_GIVEN` (O0)
+- `go_transcoder/CIRCLE_LATTICE_POINTS` (O0)
+- `go_transcoder/COMPOSITE_NUMBER` (O0, O1, O2)
+- `go_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW` (O0)
+- `go_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW_1` (O0)
+- `go_transcoder/COMPUTE_MODULUS_DIVISION_BY_A_POWER_OF_2_NUMBER` (O0)
+- `go_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0, O1, O2)
+- `go_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS` (O0, O1)
+- `go_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0)
+- `go_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2` (O0)
+- `go_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0)
+- `go_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `go_transcoder/COUNT_FACTORIAL_NUMBERS_IN_A_GIVEN_RANGE` (O0)
+- `go_transcoder/COUNT_FIBONACCI_NUMBERS_GIVEN_RANGE_LOG_TIME` (O0)
+- `go_transcoder/COUNT_FREQUENCY_K_MATRIX_SIZE_N_MATRIXI_J_IJ` (O0)
+- `go_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0, O1, O2)
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY` (O0, O1, O2)
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0, O1, O2)
+- `go_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0, O1, O2)
+- `go_transcoder/COUNT_NUMBER_PAIRS_N_B_N_GCD_B_B` (O0, O1, O2)
+- `go_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0)
+- `go_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K` (O0, O1, O2)
+- `go_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1` (O0, O1, O2)
+- `go_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0, O1, O2)
+- `go_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0, O1, O2)
+- `go_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0, O1, O2)
+- `go_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER` (O0)
+- `go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `go_transcoder/COUNT_STRINGS_CAN_FORMED_USING_B_C_GIVEN_CONSTRAINTS_1` (O0)
+- `go_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0)
+- `go_transcoder/COUNT_TRAILING_ZEROES_FACTORIAL_NUMBER` (O0, O1, O2)
+- `go_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0)
+- `go_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1` (O0)
+- `go_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0)
+- `go_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0, O1, O2)
+- `go_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0, O1, O2)
+- `go_transcoder/DISTRIBUTING_M_ITEMS_CIRCLE_SIZE_N_STARTING_K_TH_POSITION` (O0, O1, O2)
+- `go_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `go_transcoder/DIVISIBILITY_BY_7` (O0)
+- `go_transcoder/DOUBLE_FACTORIAL` (O0)
+- `go_transcoder/DYCK_PATH` (O0, O1, O2)
+- `go_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM` (O0, O1, O2)
+- `go_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0)
+- `go_transcoder/EFFICIENT_WAY_TO_MULTIPLY_WITH_7` (O0)
+- `go_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY` (O0, O1, O2)
+- `go_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/EULERS_CRITERION_CHECK_IF_SQUARE_ROOT_UNDER_MODULO_P_EXISTS` (O0, O1, O2)
+- `go_transcoder/FIBONACCI_MODULO_P` (O0, O1, O2)
+- `go_transcoder/FINDING_POWER_PRIME_NUMBER_P_N` (O0, O1, O2)
+- `go_transcoder/FINDING_POWER_PRIME_NUMBER_P_N_1` (O0, O1, O2)
+- `go_transcoder/FIND_FIRST_NATURAL_NUMBER_WHOSE_FACTORIAL_DIVISIBLE_X` (O0)
+- `go_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME` (O0)
+- `go_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0, O1, O2)
+- `go_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0, O1, O2)
+- `go_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0, O1, O2)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR` (O0, O1, O2)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0, O1, O2)
+- `go_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0, O1, O2)
+- `go_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `go_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0, O1, O2)
+- `go_transcoder/FIND_PERIMETER_CYLINDER` (O0)
+- `go_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0, O1, O2)
+- `go_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0, O1, O2)
+- `go_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0, O1, O2)
+- `go_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS_1` (O0)
+- `go_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0, O1, O2)
+- `go_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER_1` (O0, O1, O2)
+- `go_transcoder/FIND_SUM_ODD_FACTORS_NUMBER` (O0, O1, O2)
+- `go_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0, O1, O2)
+- `go_transcoder/FIND_THE_FIRST_MISSING_NUMBER` (O0, O1, O2)
+- `go_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0, O1, O2)
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS` (O0, O1, O2)
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS_1` (O0, O1, O2)
+- `go_transcoder/FIND_THE_MISSING_NUMBER_1` (O0, O1, O2)
+- `go_transcoder/FIND_THE_MISSING_NUMBER_2` (O0, O1, O2)
+- `go_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0, O1, O2)
+- `go_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0, O1, O2)
+- `go_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `go_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1` (O0)
+- `go_transcoder/FREQUENT_ELEMENT_ARRAY` (O0, O1, O2)
+- `go_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `go_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM` (O0, O1, O2)
+- `go_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM_1` (O0, O1, O2)
+- `go_transcoder/HEIGHT_COMPLETE_BINARY_TREE_HEAP_N_NODES` (O0)
+- `go_transcoder/HEXAGONAL_NUMBER` (O0)
+- `go_transcoder/HORNERS_METHOD_POLYNOMIAL_EVALUATION` (O0, O1, O2)
+- `go_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0, O1, O2)
+- `go_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1` (O0, O1, O2)
+- `go_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1, O2)
+- `go_transcoder/HOW_TO_TURN_OFF_A_PARTICULAR_BIT_IN_A_NUMBER` (O0)
+- `go_transcoder/HYPERCUBE_GRAPH` (O0)
+- `go_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `go_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2` (O0, O1, O2)
+- `go_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0, O1, O2)
+- `go_transcoder/MAXIMIZE_SUM_ARRII` (O0, O1, O2)
+- `go_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0, O1, O2)
+- `go_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `go_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES_1` (O0)
+- `go_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES` (O0)
+- `go_transcoder/MAXIMUM_NUMBER_2X2_SQUARES_CAN_FIT_INSIDE_RIGHT_ISOSCELES_TRIANGLE` (O0)
+- `go_transcoder/MAXIMUM_POINTS_INTERSECTION_N_CIRCLES` (O0)
+- `go_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/MIDDLE_OF_THREE_USING_MINIMUM_COMPARISONS_2` (O0)
+- `go_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0, O1, O2)
+- `go_transcoder/MINIMIZE_THE_SUM_OF_DIGITS_OF_A_AND_B_SUCH_THAT_A_B_N` (O0)
+- `go_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O0)
+- `go_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY` (O0, O1, O2)
+- `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0, O1, O2)
+- `go_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0, O1, O2)
+- `go_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE` (O0, O1, O2)
+- `go_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1)
+- `go_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0, O1, O2)
+- `go_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0, O1, O2)
+- `go_transcoder/MINIMUM_PERIMETER_N_BLOCKS` (O0, O1, O2)
+- `go_transcoder/MINIMUM_ROTATIONS_UNLOCK_CIRCULAR_LOCK` (O0)
+- `go_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS` (O0, O1, O2)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0, O1, O2)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0, O1, O2)
+- `go_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE` (O0, O1, O2)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0, O1, O2)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0, O1, O2)
+- `go_transcoder/MODULAR_EXPONENTIATION_POWER_IN_MODULAR_ARITHMETIC` (O0, O1, O2)
+- `go_transcoder/MULTIPLY_AN_INTEGER_WITH_3_5` (O0)
+- `go_transcoder/NEXT_POWER_OF_2` (O0)
+- `go_transcoder/NEXT_POWER_OF_2_2` (O0)
+- `go_transcoder/NON_REPEATING_ELEMENT` (O0, O1, O2)
+- `go_transcoder/NTH_NON_FIBONACCI_NUMBER` (O0)
+- `go_transcoder/NTH_PENTAGONAL_NUMBER` (O0)
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0)
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1` (O0)
+- `go_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0, O1, O2)
+- `go_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0, O1, O2)
+- `go_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `go_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N_1` (O0)
+- `go_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0, O1, O2)
+- `go_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0)
+- `go_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0, O1, O2)
+- `go_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0)
+- `go_transcoder/NUMBER_SUBSTRINGS_STRING` (O0)
+- `go_transcoder/NUMBER_TRIANGLES_N_MOVES_1` (O0)
+- `go_transcoder/NUMBER_UNIQUE_RECTANGLES_FORMED_USING_N_UNIT_SQUARES` (O0)
+- `go_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES` (O0)
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN` (O0)
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1` (O0)
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2` (O0)
+- `go_transcoder/N_TH_TERM_SERIES_2_12_36_80_150` (O0)
+- `go_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0)
+- `go_transcoder/PADOVAN_SEQUENCE` (O0)
+- `go_transcoder/PAINTING_FENCE_ALGORITHM` (O0)
+- `go_transcoder/PAIR_WITH_GIVEN_PRODUCT_SET_1_FIND_IF_ANY_PAIR_EXISTS` (O0, O1, O2)
+- `go_transcoder/PERFECT_REVERSIBLE_STRING` (O0)
+- `go_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `go_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0, O1, O2)
+- `go_transcoder/POSITION_OF_RIGHTMOST_SET_BIT_1` (O0)
+- `go_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `go_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD_1` (O0, O1, O2)
+- `go_transcoder/PRIME_NUMBERS` (O0)
+- `go_transcoder/PROBABILITY_THREE_RANDOMLY_CHOSEN_NUMBERS_AP` (O0)
+- `go_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND` (O0, O1, O2)
+- `go_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0)
+- `go_transcoder/PROGRAM_AREA_SQUARE` (O0)
+- `go_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION` (O0)
+- `go_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE_1` (O0, O1, O2)
+- `go_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0)
+- `go_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE` (O0, O1, O2)
+- `go_transcoder/PROGRAM_FOR_DEADLOCK_FREE_CONDITION_IN_OPERATING_SYSTEM` (O0)
+- `go_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `go_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0)
+- `go_transcoder/PROGRAM_OCTAL_DECIMAL_CONVERSION` (O0)
+- `go_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `go_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_2` (O0)
+- `go_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE` (O0)
+- `go_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE_1` (O0)
+- `go_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0, O1, O2)
+- `go_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0)
+- `go_transcoder/ROUND_THE_GIVEN_NUMBER_TO_NEAREST_MULTIPLE_OF_10` (O0)
+- `go_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+- `go_transcoder/SEARCH_INSERT_AND_DELETE_IN_AN_UNSORTED_ARRAY` (O0, O1, O2)
+- `go_transcoder/SEARCH_INSERT_AND_DELETE_IN_A_SORTED_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS` (O0)
+- `go_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS_1` (O0, O1, O2)
+- `go_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N` (O0)
+- `go_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_1` (O0)
+- `go_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_2` (O0)
+- `go_transcoder/SQUARED_TRIANGULAR_NUMBER_SUM_CUBES` (O0)
+- `go_transcoder/SQUARE_PYRAMIDAL_NUMBER_SUM_SQUARES` (O0)
+- `go_transcoder/SQUARE_ROOT_OF_AN_INTEGER` (O0)
+- `go_transcoder/SQUARE_ROOT_OF_AN_INTEGER_1` (O0)
+- `go_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0)
+- `go_transcoder/SUBSEQUENCES_SIZE_THREE_ARRAY_WHOSE_SUM_DIVISIBLE_M` (O0, O1, O2)
+- `go_transcoder/SUM_BINOMIAL_COEFFICIENTS_1` (O0)
+- `go_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `go_transcoder/SUM_FACTORS_NUMBER` (O0)
+- `go_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS` (O0)
+- `go_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS_1` (O0)
+- `go_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS` (O0, O1, O2)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_2` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN_1` (O0)
+- `go_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0)
+- `go_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0)
+- `go_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `go_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `go_transcoder/TAIL_RECURSION` (O0)
+- `go_transcoder/TRIANGULAR_MATCHSTICK_NUMBER` (O0)
+- `go_transcoder/TRIANGULAR_NUMBERS` (O0)
+- `go_transcoder/TRIANGULAR_NUMBERS_1` (O0)
+- `go_transcoder/TURN_OFF_THE_RIGHTMOST_SET_BIT` (O0)
+- `go_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0)
+- `go_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0)
+- `go_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+- `go_transcoder/ZECKENDORFS_THEOREM_NON_NEIGHBOURING_FIBONACCI_REPRESENTATION` (O0)
+
+</details>
+
+<details><summary>direct recursion/self-call: 63 benchmarks in at least one optimization level</summary>
+
+- O0: 63
+- O1: 16
+- O2: 16
+
+- `c_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS` (O0)
+- `c_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0)
+- `c_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0, O1, O2)
+- `c_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `c_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0)
+- `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0)
+- `c_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `c_transcoder/DOUBLE_FACTORIAL` (O0)
+- `c_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM` (O0, O1, O2)
+- `c_transcoder/FIND_THE_FIRST_MISSING_NUMBER` (O0)
+- `c_transcoder/HYPERCUBE_GRAPH` (O0, O1, O2)
+- `c_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0)
+- `c_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0)
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0, O1, O2)
+- `c_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0, O1, O2)
+- `c_transcoder/TAIL_RECURSION` (O0)
+- `c_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0)
+- `cpp_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS` (O0)
+- `cpp_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0)
+- `cpp_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0, O1, O2)
+- `cpp_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `cpp_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0)
+- `cpp_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `cpp_transcoder/DIVISIBILITY_BY_7` (O0)
+- `cpp_transcoder/DOUBLE_FACTORIAL` (O0)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME` (O0, O1, O2)
+- `cpp_transcoder/FIND_REPEATING_ELEMENT_SORTED_ARRAY_SIZE_N` (O0)
+- `cpp_transcoder/GIVEN_TWO_STRINGS_FIND_FIRST_STRING_SUBSEQUENCE_SECOND` (O0)
+- `cpp_transcoder/HYPERCUBE_GRAPH` (O0, O1, O2)
+- `cpp_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0)
+- `cpp_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE` (O0)
+- `cpp_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER` (O0)
+- `cpp_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0, O1, O2)
+- `cpp_transcoder/RECURSIVE_C_PROGRAM_LINEARLY_SEARCH_ELEMENT_GIVEN_ARRAY` (O0)
+- `cpp_transcoder/RECURSIVE_PROGRAM_PRIME_NUMBER` (O0)
+- `cpp_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS` (O0, O1, O2)
+- `cpp_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0, O1, O2)
+- `cpp_transcoder/TAIL_RECURSION` (O0)
+- `cpp_transcoder/TAIL_RECURSION_FIBONACCI` (O0)
+- `cpp_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0)
+- `go_transcoder/BASIC_AND_EXTENDED_EUCLIDEAN_ALGORITHMS` (O0)
+- `go_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0)
+- `go_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0, O1, O2)
+- `go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `go_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0)
+- `go_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0)
+- `go_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `go_transcoder/DIVISIBILITY_BY_7` (O0)
+- `go_transcoder/DOUBLE_FACTORIAL` (O0)
+- `go_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM` (O0, O1, O2)
+- `go_transcoder/FIND_THE_FIRST_MISSING_NUMBER` (O0)
+- `go_transcoder/HYPERCUBE_GRAPH` (O0, O1, O2)
+- `go_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0)
+- `go_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0)
+- `go_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0, O1, O2)
+- `go_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0, O1, O2)
+- `go_transcoder/TAIL_RECURSION` (O0)
+- `go_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0)
+
+</details>
+
+<details><summary>formatting traits/runtime: 9 benchmarks in at least one optimization level</summary>
+
+- O0: 9
+- O1: 0
+- O2: 0
+
+- `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0)
+- `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0)
+- `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0)
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM` (O0)
+- `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0)
+- `cpp_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0)
+- `cpp_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0)
+- `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0)
+- `go_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0)
+
+</details>
+
+<details><summary>iterator/range/option runtime: 395 benchmarks in at least one optimization level</summary>
+
+- O0: 361
+- O1: 65
+- O2: 65
+
+- `c_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0)
+- `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0)
+- `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING` (O0)
+- `c_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O0, O1, O2)
+- `c_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `c_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0, O1, O2)
+- `c_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY` (O0)
+- `c_transcoder/CIRCLE_LATTICE_POINTS` (O0)
+- `c_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS` (O0, O1, O2)
+- `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS` (O0)
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0)
+- `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O1, O2)
+- `c_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `c_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0)
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY` (O0)
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0)
+- `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0)
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K` (O0)
+- `c_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `c_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `c_transcoder/COUNT_POSSIBLE_GROUPS_SIZE_2_3_SUM_MULTIPLE_3` (O0)
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `c_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8` (O0, O1, O2)
+- `c_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0, O1, O2)
+- `c_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT` (O0)
+- `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0)
+- `c_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `c_transcoder/DYCK_PATH` (O0)
+- `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0)
+- `c_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY` (O0)
+- `c_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0)
+- `c_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D` (O0)
+- `c_transcoder/FIND_LARGEST_PRIME_FACTOR_NUMBER` (O0)
+- `c_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B` (O0)
+- `c_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0)
+- `c_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY` (O0)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR` (O0)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0)
+- `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `c_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `c_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O0)
+- `c_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0)
+- `c_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `c_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0)
+- `c_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `c_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `c_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `c_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0)
+- `c_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY` (O0)
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS` (O0)
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS_1` (O0)
+- `c_transcoder/FIND_THE_MISSING_NUMBER_2` (O0)
+- `c_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `c_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1` (O0)
+- `c_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE` (O0)
+- `c_transcoder/FLOOR_IN_A_SORTED_ARRAY` (O0)
+- `c_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `c_transcoder/HEXAGONAL_NUMBER` (O0)
+- `c_transcoder/HORNERS_METHOD_POLYNOMIAL_EVALUATION` (O0)
+- `c_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0)
+- `c_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1` (O0)
+- `c_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1, O2)
+- `c_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1` (O0)
+- `c_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0)
+- `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0)
+- `c_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2` (O0)
+- `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O1, O2)
+- `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `c_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `c_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0)
+- `c_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES` (O0)
+- `c_transcoder/MAXIMUM_PRODUCT_SUBARRAY_ADDED_NEGATIVE_PRODUCT_CASE` (O0)
+- `c_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `c_transcoder/MAXIMUM_SUBARRAY_SUM_ARRAY_CREATED_REPEATED_CONCATENATION` (O0)
+- `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY` (O0)
+- `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY_1` (O0)
+- `c_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY` (O0)
+- `c_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL` (O0)
+- `c_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0)
+- `c_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O0, O1, O2)
+- `c_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY` (O0)
+- `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0)
+- `c_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `c_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED` (O0)
+- `c_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `c_transcoder/MINIMUM_PRODUCT_SUBSET_ARRAY` (O0)
+- `c_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O1, O2)
+- `c_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS` (O0)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `c_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE` (O0)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0)
+- `c_transcoder/NON_REPEATING_ELEMENT` (O0)
+- `c_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `c_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `c_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `c_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0)
+- `c_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0)
+- `c_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0, O1, O2)
+- `c_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK` (O0)
+- `c_transcoder/PADOVAN_SEQUENCE` (O0)
+- `c_transcoder/PAINTING_FENCE_ALGORITHM` (O0)
+- `c_transcoder/PERFECT_REVERSIBLE_STRING` (O0, O1, O2)
+- `c_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `c_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `c_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `c_transcoder/PRIMALITY_TEST_SET_5USING_LUCAS_LEHMER_SERIES` (O0)
+- `c_transcoder/PRIME_NUMBERS` (O0)
+- `c_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `c_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE_1` (O0)
+- `c_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0, O1, O2)
+- `c_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE` (O0)
+- `c_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `c_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `c_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `c_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O0, O1, O2)
+- `c_transcoder/REMOVE_MINIMUM_ELEMENTS_EITHER_SIDE_2MIN_MAX` (O0)
+- `c_transcoder/SIZE_SUBARRAY_MAXIMUM_SUM` (O0)
+- `c_transcoder/SUBSEQUENCES_SIZE_THREE_ARRAY_WHOSE_SUM_DIVISIBLE_M` (O0)
+- `c_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `c_transcoder/SUM_FACTORS_NUMBER` (O0)
+- `c_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `c_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `c_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE` (O0)
+- `c_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0)
+- `c_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `c_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `c_transcoder/SUM_SERIES_ALTERNATE_SIGNED_SQUARES_AP` (O0)
+- `c_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0, O1, O2)
+- `c_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+- `cpp_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0)
+- `cpp_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0)
+- `cpp_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `cpp_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING` (O1, O2)
+- `cpp_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `cpp_transcoder/CHECK_DIVISIBILITY_BINARY_STRING_2K` (O0)
+- `cpp_transcoder/CHECK_GIVEN_SENTENCE_GIVEN_SET_SIMPLE_GRAMMER_RULES` (O0, O1, O2)
+- `cpp_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `cpp_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT` (O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_13_NOT` (O1, O2)
+- `cpp_transcoder/CHECK_OCCURRENCES_CHARACTER_APPEAR_TOGETHER` (O1, O2)
+- `cpp_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O1, O2)
+- `cpp_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `cpp_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS` (O1, O2)
+- `cpp_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2` (O0)
+- `cpp_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O1, O2)
+- `cpp_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `cpp_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0)
+- `cpp_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0)
+- `cpp_transcoder/COUNT_NATURAL_NUMBERS_WHOSE_PERMUTATION_GREATER_NUMBER` (O0)
+- `cpp_transcoder/COUNT_NUMBER_OF_OCCURRENCES_OR_FREQUENCY_IN_A_SORTED_ARRAY` (O0)
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1` (O0)
+- `cpp_transcoder/COUNT_OF_OCCURRENCES_OF_A_101_PATTERN_IN_A_STRING` (O1, O2)
+- `cpp_transcoder/COUNT_OF_SUB_STRINGS_THAT_DO_NOT_CONTAIN_ALL_THE_CHARACTERS_FROM_THE_SET_A_B_C_AT_THE_SAME_TIME` (O0)
+- `cpp_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `cpp_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `cpp_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_4` (O1, O2)
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_8` (O1, O2)
+- `cpp_transcoder/COUNT_TOTAL_SET_BITS_IN_ALL_NUMBERS_FROM_1_TO_N` (O0)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1` (O0)
+- `cpp_transcoder/DECODE_MEDIAN_STRING_ORIGINAL_STRING` (O1, O2)
+- `cpp_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `cpp_transcoder/DOUBLE_FACTORIAL_1` (O0)
+- `cpp_transcoder/DYCK_PATH` (O0)
+- `cpp_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY` (O0)
+- `cpp_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0)
+- `cpp_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O1, O2)
+- `cpp_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `cpp_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `cpp_transcoder/FIND_MINIMUM_SUM_FACTORS_NUMBER` (O0)
+- `cpp_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `cpp_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `cpp_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0)
+- `cpp_transcoder/FIND_PATTERNS_101_GIVEN_STRING` (O1, O2)
+- `cpp_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7` (O1, O2)
+- `cpp_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `cpp_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0)
+- `cpp_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM` (O0)
+- `cpp_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `cpp_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `cpp_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0)
+- `cpp_transcoder/FIND_THE_MISSING_NUMBER_1` (O0)
+- `cpp_transcoder/FIND_THE_MISSING_NUMBER_2` (O0)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `cpp_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `cpp_transcoder/FLOOR_IN_A_SORTED_ARRAY` (O0)
+- `cpp_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `cpp_transcoder/GIVEN_TWO_STRINGS_FIND_FIRST_STRING_SUBSEQUENCE_SECOND_1` (O0)
+- `cpp_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0)
+- `cpp_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0)
+- `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0)
+- `cpp_transcoder/LARGEST_SUBSEQUENCE_GCD_GREATER_1` (O0)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE` (O1, O2)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE_1` (O0)
+- `cpp_transcoder/LONGEST_PALINDROME_SUBSEQUENCE_SPACE` (O1, O2)
+- `cpp_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O1, O2)
+- `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `cpp_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `cpp_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING` (O1, O2)
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1` (O1, O2)
+- `cpp_transcoder/MAXIMUM_EQULIBRIUM_SUM_ARRAY` (O0)
+- `cpp_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `cpp_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY` (O0)
+- `cpp_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY` (O0)
+- `cpp_transcoder/MINIMIZE_THE_MAXIMUM_DIFFERENCE_BETWEEN_THE_HEIGHTS` (O0)
+- `cpp_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O1, O2)
+- `cpp_transcoder/MINIMUM_COST_MAKE_ARRAY_SIZE_1_REMOVING_LARGER_PAIRS` (O0)
+- `cpp_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `cpp_transcoder/MINIMUM_INCREMENT_K_OPERATIONS_MAKE_ELEMENTS_EQUAL` (O0)
+- `cpp_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `cpp_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0)
+- `cpp_transcoder/MIN_FLIPS_OF_CONTINUOUS_CHARACTERS_TO_MAKE_ALL_CHARACTERS_SAME_IN_A_STRING` (O0)
+- `cpp_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `cpp_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `cpp_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `cpp_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O1, O2)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK` (O1, O2)
+- `cpp_transcoder/NUMBER_SUBSTRINGS_DIVISIBLE_4_STRING_INTEGERS` (O0, O1, O2)
+- `cpp_transcoder/PADOVAN_SEQUENCE` (O0)
+- `cpp_transcoder/PARTITION_INTO_TWO_SUBARRAYS_OF_LENGTHS_K_AND_N_K_SUCH_THAT_THE_DIFFERENCE_OF_SUMS_IS_MAXIMUM` (O0)
+- `cpp_transcoder/PERFECT_REVERSIBLE_STRING` (O1, O2)
+- `cpp_transcoder/PERMUTE_TWO_ARRAYS_SUM_EVERY_PAIR_GREATER_EQUAL_K` (O0)
+- `cpp_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `cpp_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `cpp_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `cpp_transcoder/PRIME_NUMBERS` (O0)
+- `cpp_transcoder/PRINT_WORDS_STRING_REVERSE_ORDER` (O1, O2)
+- `cpp_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O1, O2)
+- `cpp_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `cpp_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `cpp_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O1, O2)
+- `cpp_transcoder/REARRANGE_ARRAY_MAXIMUM_MINIMUM_FORM_SET_2_O1_EXTRA_SPACE` (O0)
+- `cpp_transcoder/REARRANGE_ARRAY_MAXIMUM_MINIMUM_FORM_SET_2_O1_EXTRA_SPACE_1` (O0, O1, O2)
+- `cpp_transcoder/REMOVE_MINIMUM_ELEMENTS_EITHER_SIDE_2MIN_MAX` (O0)
+- `cpp_transcoder/REPLACE_CHARACTER_C1_C2_C2_C1_STRING_S` (O1, O2)
+- `cpp_transcoder/SCHEDULE_ELEVATOR_TO_REDUCE_THE_TOTAL_TIME_TAKEN` (O0)
+- `cpp_transcoder/SEARCH_INSERT_AND_DELETE_IN_AN_UNSORTED_ARRAY` (O0)
+- `cpp_transcoder/SIZE_SUBARRAY_MAXIMUM_SUM` (O0)
+- `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS` (O0)
+- `cpp_transcoder/SORT_ARRAY_CONTAIN_1_N_VALUES` (O0)
+- `cpp_transcoder/SPACE_OPTIMIZED_SOLUTION_LCS` (O1, O2)
+- `cpp_transcoder/STRING_CONTAINING_FIRST_LETTER_EVERY_WORD_GIVEN_STRING_SPACES` (O1, O2)
+- `cpp_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN_1` (O0)
+- `cpp_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O1, O2)
+- `cpp_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS_2` (O0)
+- `cpp_transcoder/SUM_SERIES_12_32_52_2N_12` (O0)
+- `cpp_transcoder/TOTAL_NUMBER_OF_NON_DECREASING_NUMBERS_WITH_N_DIGITS_1` (O0)
+- `cpp_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O1, O2)
+- `cpp_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+- `go_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0)
+- `go_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0)
+- `go_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `go_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `go_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O0, O1, O2)
+- `go_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `go_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `go_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0, O1, O2)
+- `go_transcoder/CIRCLE_LATTICE_POINTS` (O0)
+- `go_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `go_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0)
+- `go_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `go_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0)
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY` (O0)
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0)
+- `go_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0)
+- `go_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K` (O0)
+- `go_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `go_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `go_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `go_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `go_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0, O1, O2)
+- `go_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0)
+- `go_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `go_transcoder/DYCK_PATH` (O0)
+- `go_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0)
+- `go_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY` (O0)
+- `go_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0)
+- `go_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `go_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0)
+- `go_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR` (O0)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0)
+- `go_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `go_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `go_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O0)
+- `go_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0)
+- `go_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `go_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0)
+- `go_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `go_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `go_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `go_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0)
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS` (O0)
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS_1` (O0)
+- `go_transcoder/FIND_THE_MISSING_NUMBER_2` (O0)
+- `go_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `go_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `go_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `go_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `go_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `go_transcoder/HEXAGONAL_NUMBER` (O0)
+- `go_transcoder/HORNERS_METHOD_POLYNOMIAL_EVALUATION` (O0)
+- `go_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0)
+- `go_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1` (O0)
+- `go_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1, O2)
+- `go_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1` (O0)
+- `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0)
+- `go_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2` (O0)
+- `go_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `go_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `go_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0)
+- `go_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `go_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES` (O0)
+- `go_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `go_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY_1` (O0)
+- `go_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0)
+- `go_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O0, O1, O2)
+- `go_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY` (O0)
+- `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0)
+- `go_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `go_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `go_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS` (O0)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `go_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE` (O0)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0)
+- `go_transcoder/NON_REPEATING_ELEMENT` (O0)
+- `go_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `go_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `go_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `go_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0)
+- `go_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0)
+- `go_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0, O1, O2)
+- `go_transcoder/PADOVAN_SEQUENCE` (O0)
+- `go_transcoder/PAINTING_FENCE_ALGORITHM` (O0)
+- `go_transcoder/PERFECT_REVERSIBLE_STRING` (O0, O1, O2)
+- `go_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `go_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `go_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `go_transcoder/PRIME_NUMBERS` (O0)
+- `go_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `go_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE_1` (O0)
+- `go_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0, O1, O2)
+- `go_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE` (O0)
+- `go_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `go_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `go_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `go_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O0, O1, O2)
+- `go_transcoder/SUBSEQUENCES_SIZE_THREE_ARRAY_WHOSE_SUM_DIVISIBLE_M` (O0)
+- `go_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `go_transcoder/SUM_FACTORS_NUMBER` (O0)
+- `go_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `go_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `go_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0)
+- `go_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `go_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `go_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0, O1, O2)
+- `go_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+
+</details>
+
+<details><summary>llvm.* intrinsics: 970 benchmarks in at least one optimization level</summary>
+
+- O0: 922
+- O1: 555
+- O2: 558
+
+- `c_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O2)
+- `c_transcoder/AREA_SQUARE_CIRCUMSCRIBED_CIRCLE` (O0, O1, O2)
+- `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0, O1, O2)
+- `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET` (O0, O1, O2)
+- `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `c_transcoder/BIRTHDAY_PARADOX` (O0, O1, O2)
+- `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING` (O0)
+- `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION` (O0, O1, O2)
+- `c_transcoder/CEILING_IN_A_SORTED_ARRAY` (O0)
+- `c_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0)
+- `c_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O1, O2)
+- `c_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O1, O2)
+- `c_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `c_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION` (O0, O1, O2)
+- `c_transcoder/CHECK_NUMBER_IS_PERFECT_SQUARE_USING_ADDITIONSUBTRACTION` (O0)
+- `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED` (O1, O2)
+- `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0, O1, O2)
+- `c_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY` (O0)
+- `c_transcoder/CHECK_WHETHER_TRIANGLE_VALID_NOT_SIDES_GIVEN` (O0)
+- `c_transcoder/CIRCLE_LATTICE_POINTS` (O0, O1, O2)
+- `c_transcoder/COMPOSITE_NUMBER` (O0)
+- `c_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW` (O0)
+- `c_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW_1` (O0, O1, O2)
+- `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION` (O0, O1, O2)
+- `c_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS` (O0, O1, O2)
+- `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1` (O0, O1)
+- `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1` (O0, O1, O2)
+- `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS` (O0, O1, O2)
+- `c_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS` (O0, O1, O2)
+- `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1` (O0, O1)
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0, O1, O2)
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_2` (O0, O1, O2)
+- `c_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2` (O0)
+- `c_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0, O1, O2)
+- `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0, O1, O2)
+- `c_transcoder/COUNT_FACTORIAL_NUMBERS_IN_A_GIVEN_RANGE` (O0)
+- `c_transcoder/COUNT_FIBONACCI_NUMBERS_GIVEN_RANGE_LOG_TIME` (O0)
+- `c_transcoder/COUNT_FREQUENCY_K_MATRIX_SIZE_N_MATRIXI_J_IJ` (O0)
+- `c_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0, O2)
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY` (O0)
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0)
+- `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0)
+- `c_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S` (O0, O1)
+- `c_transcoder/COUNT_NUMBER_INCREASING_SUBSEQUENCES_SIZE_K` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1` (O0, O1)
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES` (O0, O1)
+- `c_transcoder/COUNT_NUMBER_PAIRS_N_B_N_GCD_B_B` (O0, O1, O2)
+- `c_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME` (O0, O1)
+- `c_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES` (O0, O1)
+- `c_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0, O1, O2)
+- `c_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4` (O0, O1)
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K` (O0, O2)
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1` (O0, O1, O2)
+- `c_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `c_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `c_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING` (O0, O1, O2)
+- `c_transcoder/COUNT_POSSIBLE_GROUPS_SIZE_2_3_SUM_MULTIPLE_3` (O0, O1, O2)
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1` (O0, O1, O2)
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `c_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8` (O0, O1, O2)
+- `c_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `c_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `c_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE` (O0, O1, O2)
+- `c_transcoder/COUNT_STRINGS_CAN_FORMED_USING_B_C_GIVEN_CONSTRAINTS_1` (O0, O1, O2)
+- `c_transcoder/COUNT_STRINGS_WITH_CONSECUTIVE_1S` (O0, O1, O2)
+- `c_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0, O1, O2)
+- `c_transcoder/COUNT_TRAILING_ZEROES_FACTORIAL_NUMBER` (O0)
+- `c_transcoder/COUNT_WAYS_BUILD_STREET_GIVEN_CONSTRAINTS` (O0, O1, O2)
+- `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0, O2)
+- `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1` (O0, O2)
+- `c_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0, O2)
+- `c_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT` (O1)
+- `c_transcoder/DELANNOY_NUMBER_1` (O0, O1, O2)
+- `c_transcoder/DICE_THROW_PROBLEM` (O0, O1, O2)
+- `c_transcoder/DICE_THROW_PROBLEM_1` (O0, O1, O2)
+- `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0, O1, O2)
+- `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW` (O0, O1)
+- `c_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M` (O0, O1, O2)
+- `c_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `c_transcoder/DISTRIBUTING_M_ITEMS_CIRCLE_SIZE_N_STARTING_K_TH_POSITION` (O0)
+- `c_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `c_transcoder/DOUBLE_FACTORIAL` (O0, O2)
+- `c_transcoder/DOUBLE_FACTORIAL_1` (O0, O1, O2)
+- `c_transcoder/DYCK_PATH` (O0)
+- `c_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_8_MATRIX_CHAIN_MULTIPLICATION_1` (O0, O1, O2)
+- `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0)
+- `c_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1` (O0, O1, O2)
+- `c_transcoder/EFFICIENT_WAY_TO_MULTIPLY_WITH_7` (O0)
+- `c_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY` (O0, O2)
+- `c_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0)
+- `c_transcoder/EULERIAN_NUMBER_1` (O0, O1, O2)
+- `c_transcoder/EULERS_CRITERION_CHECK_IF_SQUARE_ROOT_UNDER_MODULO_P_EXISTS` (O0)
+- `c_transcoder/EVEN_FIBONACCI_NUMBERS_SUM` (O0, O1, O2)
+- `c_transcoder/FIBONACCI_MODULO_P` (O0)
+- `c_transcoder/FINDING_POWER_PRIME_NUMBER_P_N` (O0)
+- `c_transcoder/FINDING_POWER_PRIME_NUMBER_P_N_1` (O0)
+- `c_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE` (O0, O1)
+- `c_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O0, O1, O2)
+- `c_transcoder/FIND_FIRST_NATURAL_NUMBER_WHOSE_FACTORIAL_DIVISIBLE_X` (O0)
+- `c_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME` (O0)
+- `c_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1` (O0, O1, O2)
+- `c_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D` (O0, O1)
+- `c_transcoder/FIND_LARGEST_PRIME_FACTOR_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B` (O0, O1, O2)
+- `c_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0, O1, O2)
+- `c_transcoder/FIND_MAXIMUM_DOT_PRODUCT_TWO_ARRAYS_INSERTION_0S` (O0, O1, O2)
+- `c_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY` (O0)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR` (O0, O1, O2)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0, O1, O2)
+- `c_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1` (O0, O1)
+- `c_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE` (O0, O1, O2)
+- `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0, O1, O2)
+- `c_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0, O1, O2)
+- `c_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES` (O0, O1)
+- `c_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O1, O2)
+- `c_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0, O1, O2)
+- `c_transcoder/FIND_PATTERNS_101_GIVEN_STRING` (O0)
+- `c_transcoder/FIND_PERIMETER_CYLINDER` (O0, O1, O2)
+- `c_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7` (O0)
+- `c_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `c_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0)
+- `c_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `c_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `c_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS_1` (O0)
+- `c_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `c_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER_1` (O0)
+- `c_transcoder/FIND_SUM_ODD_FACTORS_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT` (O0, O1, O2)
+- `c_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `c_transcoder/FIND_THE_FIRST_MISSING_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS_1` (O0, O1, O2)
+- `c_transcoder/FIND_THE_MISSING_NUMBER_1` (O0)
+- `c_transcoder/FIND_THE_MISSING_NUMBER_2` (O0)
+- `c_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `c_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1` (O0, O1, O2)
+- `c_transcoder/FIND_VALUE_OF_Y_MOD_2_RAISED_TO_POWER_X` (O1, O2)
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1` (O2)
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1_1` (O0, O1, O2)
+- `c_transcoder/FLOOR_IN_A_SORTED_ARRAY` (O0)
+- `c_transcoder/FREQUENT_ELEMENT_ARRAY` (O0, O1, O2)
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM` (O0, O1)
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `c_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM` (O0)
+- `c_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM_1` (O0)
+- `c_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1` (O0, O1, O2)
+- `c_transcoder/HEIGHT_COMPLETE_BINARY_TREE_HEAP_N_NODES` (O0, O1, O2)
+- `c_transcoder/HEXAGONAL_NUMBER` (O0)
+- `c_transcoder/HIGHWAY_BILLBOARD_PROBLEM` (O0, O1, O2)
+- `c_transcoder/HORNERS_METHOD_POLYNOMIAL_EVALUATION` (O0)
+- `c_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0)
+- `c_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1` (O0)
+- `c_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1, O2)
+- `c_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS` (O0, O1, O2)
+- `c_transcoder/HOW_TO_TURN_OFF_A_PARTICULAR_BIT_IN_A_NUMBER` (O0)
+- `c_transcoder/HYPERCUBE_GRAPH` (O0)
+- `c_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0, O1, O2)
+- `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `c_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2` (O0, O1, O2)
+- `c_transcoder/LENGTH_OF_THE_LONGEST_ARITHMATIC_PROGRESSION_IN_A_SORTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/LEONARDO_NUMBER_1` (O0, O1)
+- `c_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS` (O0, O1)
+- `c_transcoder/LONGEST_COMMON_SUBSTRING_SPACE_OPTIMIZED_DP_SOLUTION` (O0, O1, O2)
+- `c_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O0, O1, O2)
+- `c_transcoder/LONGEST_REPEATING_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE` (O0, O1, O2)
+- `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_ARRAY_ELEMENTS_UPTO_GIVEN_NUMBER` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_SUM_ARRII` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0, O1, O2)
+- `c_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES_1` (O0)
+- `c_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_GAMES_PLAYED_WINNER` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES` (O0)
+- `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_NUMBER_2X2_SQUARES_CAN_FIT_INSIDE_RIGHT_ISOSCELES_TRIANGLE` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_POINTS_INTERSECTION_N_CIRCLES` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_PRODUCT_SUBARRAY_ADDED_NEGATIVE_PRODUCT_CASE` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0, O1)
+- `c_transcoder/MAXIMUM_SUBARRAY_SUM_ARRAY_CREATED_REPEATED_CONCATENATION` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_BITONIC_SUBARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_SUBARRAY_REMOVING_ONE_ELEMENT` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_SUM_SUBSEQUENCE_LEAST_K_DISTANT_ELEMENTS` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY` (O0, O1, O2)
+- `c_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0, O1)
+- `c_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING` (O0, O1, O2)
+- `c_transcoder/MIDDLE_OF_THREE_USING_MINIMUM_COMPARISONS_1` (O1, O2)
+- `c_transcoder/MIDDLE_OF_THREE_USING_MINIMUM_COMPARISONS_2` (O0)
+- `c_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL` (O0, O1, O2)
+- `c_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0, O1, O2)
+- `c_transcoder/MINIMIZE_THE_SUM_OF_DIGITS_OF_A_AND_B_SUCH_THAT_A_B_N` (O0, O1, O2)
+- `c_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O1, O2)
+- `c_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY` (O0, O1, O2)
+- `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0, O1, O2)
+- `c_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED` (O0, O1, O2)
+- `c_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE` (O0, O1, O2)
+- `c_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1, O2)
+- `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `c_transcoder/MINIMUM_PERIMETER_N_BLOCKS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_PRODUCT_SUBSET_ARRAY` (O0, O1, O2)
+- `c_transcoder/MINIMUM_ROTATIONS_UNLOCK_CIRCULAR_LOCK` (O0, O1, O2)
+- `c_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION` (O0, O1, O2)
+- `c_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS` (O0, O1, O2)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0, O1, O2)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0, O1, O2)
+- `c_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE` (O0, O1, O2)
+- `c_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION` (O0, O1, O2)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0, O1, O2)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0, O1, O2)
+- `c_transcoder/MODULAR_EXPONENTIATION_POWER_IN_MODULAR_ARITHMETIC` (O0)
+- `c_transcoder/MULTIPLY_AN_INTEGER_WITH_3_5` (O0)
+- `c_transcoder/MULTIPLY_LARGE_INTEGERS_UNDER_LARGE_MODULO` (O0)
+- `c_transcoder/NEWMAN_CONWAY_SEQUENCE_1` (O0, O1)
+- `c_transcoder/NEXT_POWER_OF_2` (O0, O1, O2)
+- `c_transcoder/NEXT_POWER_OF_2_1` (O0)
+- `c_transcoder/NON_REPEATING_ELEMENT` (O0)
+- `c_transcoder/NTH_NON_FIBONACCI_NUMBER` (O0, O1, O2)
+- `c_transcoder/NTH_PENTAGONAL_NUMBER` (O0)
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0, O1, O2)
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1` (O0, O1, O2)
+- `c_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `c_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0, O1, O2)
+- `c_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `c_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N_1` (O0)
+- `c_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS` (O0, O1, O2)
+- `c_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS` (O0, O1, O2)
+- `c_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH` (O0, O1)
+- `c_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `c_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0, O2)
+- `c_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0, O2)
+- `c_transcoder/NUMBER_RECTANGLES_NM_GRID` (O0, O1, O2)
+- `c_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0, O1, O2)
+- `c_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK` (O0, O1, O2)
+- `c_transcoder/NUMBER_SUBSTRINGS_STRING` (O0)
+- `c_transcoder/NUMBER_TRIANGLES_N_MOVES_1` (O0, O1, O2)
+- `c_transcoder/NUMBER_UNIQUE_RECTANGLES_FORMED_USING_N_UNIT_SQUARES` (O0, O1, O2)
+- `c_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES` (O0, O1, O2)
+- `c_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N` (O0, O1, O2)
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN` (O0)
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1` (O0, O1, O2)
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2` (O0, O1, O2)
+- `c_transcoder/N_TH_TERM_SERIES_2_12_36_80_150` (O0)
+- `c_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0, O2)
+- `c_transcoder/PADOVAN_SEQUENCE` (O0)
+- `c_transcoder/PAINTING_FENCE_ALGORITHM` (O0)
+- `c_transcoder/PAIR_WITH_GIVEN_PRODUCT_SET_1_FIND_IF_ANY_PAIR_EXISTS` (O0)
+- `c_transcoder/PERFECT_REVERSIBLE_STRING` (O1, O2)
+- `c_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `c_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `c_transcoder/POSITION_OF_RIGHTMOST_SET_BIT_1` (O0)
+- `c_transcoder/POSSIBLE_FORM_TRIANGLE_ARRAY_VALUES` (O0, O1, O2)
+- `c_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD_1` (O0, O1, O2)
+- `c_transcoder/PRIMALITY_TEST_SET_5USING_LUCAS_LEHMER_SERIES` (O0, O1, O2)
+- `c_transcoder/PROBABILITY_THREE_RANDOMLY_CHOSEN_NUMBERS_AP` (O0)
+- `c_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND` (O0, O1, O2)
+- `c_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND_1` (O0, O1, O2)
+- `c_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `c_transcoder/PROGRAM_AREA_SQUARE` (O0)
+- `c_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION` (O0, O1, O2)
+- `c_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE_1` (O2)
+- `c_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0, O1, O2)
+- `c_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE` (O0, O1, O2)
+- `c_transcoder/PROGRAM_FOR_DEADLOCK_FREE_CONDITION_IN_OPERATING_SYSTEM` (O0)
+- `c_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `c_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0, O2)
+- `c_transcoder/PROGRAM_OCTAL_DECIMAL_CONVERSION` (O0)
+- `c_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `c_transcoder/PROGRAM_TO_CHECK_IF_A_GIVEN_NUMBER_IS_LUCKY_ALL_DIGITS_ARE_DIFFERENT` (O0, O1, O2)
+- `c_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR` (O0, O1, O2)
+- `c_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_2` (O0)
+- `c_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE` (O0)
+- `c_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE_1` (O0)
+- `c_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `c_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O1, O2)
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0, O1, O2)
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O0, O1, O2)
+- `c_transcoder/REMAINDER_7_LARGE_NUMBERS` (O0, O1, O2)
+- `c_transcoder/REMOVE_MINIMUM_ELEMENTS_EITHER_SIDE_2MIN_MAX` (O0, O1, O2)
+- `c_transcoder/ROUND_THE_GIVEN_NUMBER_TO_NEAREST_MULTIPLE_OF_10` (O0)
+- `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+- `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0, O1, O2)
+- `c_transcoder/SEARCH_INSERT_AND_DELETE_IN_AN_UNSORTED_ARRAY` (O0)
+- `c_transcoder/SEARCH_INSERT_AND_DELETE_IN_A_SORTED_ARRAY_1` (O0)
+- `c_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1` (O0, O1, O2)
+- `c_transcoder/SIZE_SUBARRAY_MAXIMUM_SUM` (O0)
+- `c_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS` (O0, O1, O2)
+- `c_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N` (O0, O1, O2)
+- `c_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_1` (O1, O2)
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM` (O0, O1, O2)
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1` (O0, O1, O2)
+- `c_transcoder/SQUARED_TRIANGULAR_NUMBER_SUM_CUBES` (O0)
+- `c_transcoder/SQUARE_PYRAMIDAL_NUMBER_SUM_SQUARES` (O0)
+- `c_transcoder/SQUARE_ROOT_OF_AN_INTEGER` (O0)
+- `c_transcoder/SQUARE_ROOT_OF_AN_INTEGER_1` (O0)
+- `c_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0)
+- `c_transcoder/SUBSEQUENCES_SIZE_THREE_ARRAY_WHOSE_SUM_DIVISIBLE_M` (O0)
+- `c_transcoder/SUM_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `c_transcoder/SUM_DIVISORS_1_N_1` (O0, O1, O2)
+- `c_transcoder/SUM_FACTORS_NUMBER` (O0, O1, O2)
+- `c_transcoder/SUM_FIBONACCI_NUMBERS` (O0, O1)
+- `c_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS` (O0)
+- `c_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS_1` (O0)
+- `c_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N` (O0, O1)
+- `c_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS` (O0, O1, O2)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS` (O0, O1, O2)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_2` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN_1` (O0)
+- `c_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `c_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE` (O0)
+- `c_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0, O1, O2)
+- `c_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `c_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0, O1, O2)
+- `c_transcoder/SUM_SERIES_12_32_52_2N_12_1` (O0, O1, O2)
+- `c_transcoder/SUM_SERIES_555555_N_TERMS` (O0, O1, O2)
+- `c_transcoder/SUM_SERIES_ALTERNATE_SIGNED_SQUARES_AP` (O0)
+- `c_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `c_transcoder/SWAP_TWO_NIBBLES_BYTE` (O1, O2)
+- `c_transcoder/TAIL_RECURSION` (O0, O2)
+- `c_transcoder/TILING_WITH_DOMINOES` (O0, O1, O2)
+- `c_transcoder/TRIANGULAR_MATCHSTICK_NUMBER` (O0)
+- `c_transcoder/TRIANGULAR_NUMBERS` (O0)
+- `c_transcoder/TRIANGULAR_NUMBERS_1` (O0)
+- `c_transcoder/TURN_OFF_THE_RIGHTMOST_SET_BIT` (O0)
+- `c_transcoder/UGLY_NUMBERS` (O0, O1, O2)
+- `c_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED` (O0, O1, O2)
+- `c_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0, O1, O2)
+- `c_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS` (O0, O1)
+- `c_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O0, O1, O2)
+- `c_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0, O1, O2)
+- `c_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0, O1, O2)
+- `c_transcoder/ZECKENDORFS_THEOREM_NON_NEIGHBOURING_FIBONACCI_REPRESENTATION` (O0)
+- `cpp_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0)
+- `cpp_transcoder/AREA_SQUARE_CIRCUMSCRIBED_CIRCLE` (O0)
+- `cpp_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0, O1, O2)
+- `cpp_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET` (O0, O1, O2)
+- `cpp_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `cpp_transcoder/BREAKING_NUMBER_FIRST_PART_INTEGRAL_DIVISION_SECOND_POWER_10` (O0, O1, O2)
+- `cpp_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING` (O0, O1, O2)
+- `cpp_transcoder/CALCULATE_SUM_OF_ALL_NUMBERS_PRESENT_IN_A_STRING` (O0, O1, O2)
+- `cpp_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0, O1, O2)
+- `cpp_transcoder/CHANGE_BITS_CAN_MADE_ONE_FLIP` (O0, O1, O2)
+- `cpp_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `cpp_transcoder/CHECK_CHARACTERS_GIVEN_STRING_CAN_REARRANGED_FORM_PALINDROME_1` (O1, O2)
+- `cpp_transcoder/CHECK_DIVISIBILITY_BINARY_STRING_2K` (O0, O1, O2)
+- `cpp_transcoder/CHECK_GIVEN_SENTENCE_GIVEN_SET_SIMPLE_GRAMMER_RULES` (O1, O2)
+- `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS` (O1, O2)
+- `cpp_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O1, O2)
+- `cpp_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `cpp_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_IF_STRING_REMAINS_PALINDROME_AFTER_REMOVING_GIVEN_NUMBER_OF_CHARACTERS` (O1, O2)
+- `cpp_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `cpp_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION` (O0, O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_11_NOT` (O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_13_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_6_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_LARGE_NUMBER_DIVISIBLE_9_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_NUMBER_IS_PERFECT_SQUARE_USING_ADDITIONSUBTRACTION` (O0)
+- `cpp_transcoder/CHECK_OCCURRENCES_CHARACTER_APPEAR_TOGETHER` (O1, O2)
+- `cpp_transcoder/CHECK_STRING_CAN_OBTAINED_ROTATING_ANOTHER_STRING_2_PLACES` (O1, O2)
+- `cpp_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0, O1, O2)
+- `cpp_transcoder/CHECK_WHETHER_TRIANGLE_VALID_NOT_SIDES_GIVEN` (O0)
+- `cpp_transcoder/COIN_GAME_WINNER_EVERY_PLAYER_THREE_CHOICES` (O0, O1)
+- `cpp_transcoder/COMPOSITE_NUMBER` (O0)
+- `cpp_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW` (O0)
+- `cpp_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW_1` (O0)
+- `cpp_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION` (O0, O1, O2)
+- `cpp_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `cpp_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS` (O0, O1, O2)
+- `cpp_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1` (O0, O1)
+- `cpp_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS` (O0, O1, O2)
+- `cpp_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1` (O0, O1)
+- `cpp_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2` (O0, O2)
+- `cpp_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_FIBONACCI_NUMBERS_GIVEN_RANGE_LOG_TIME` (O0)
+- `cpp_transcoder/COUNT_FREQUENCY_K_MATRIX_SIZE_N_MATRIXI_J_IJ` (O0)
+- `cpp_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0, O2)
+- `cpp_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0, O2)
+- `cpp_transcoder/COUNT_NATURAL_NUMBERS_WHOSE_PERMUTATION_GREATER_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0)
+- `cpp_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_OF_OCCURRENCES_OR_FREQUENCY_IN_A_SORTED_ARRAY` (O0)
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES` (O0, O1)
+- `cpp_transcoder/COUNT_NUMBER_PAIRS_N_B_N_GCD_B_B` (O0)
+- `cpp_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME` (O0, O1)
+- `cpp_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES` (O0, O1)
+- `cpp_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0, O1, O2)
+- `cpp_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4` (O0, O1, O2)
+- `cpp_transcoder/COUNT_OF_OCCURRENCES_OF_A_101_PATTERN_IN_A_STRING` (O0, O1, O2)
+- `cpp_transcoder/COUNT_OF_PAIRS_SATISFYING_THE_GIVEN_CONDITION` (O0, O1, O2)
+- `cpp_transcoder/COUNT_OF_SUB_STRINGS_THAT_DO_NOT_CONTAIN_ALL_THE_CHARACTERS_FROM_THE_SET_A_B_C_AT_THE_SAME_TIME` (O0, O1, O2)
+- `cpp_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `cpp_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X_2` (O0)
+- `cpp_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `cpp_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING` (O0, O1, O2)
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `cpp_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_4` (O0, O1, O2)
+- `cpp_transcoder/COUNT_ROTATIONS_DIVISIBLE_8` (O0, O1, O2)
+- `cpp_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `cpp_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `cpp_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE` (O0, O1, O2)
+- `cpp_transcoder/COUNT_STRINGS_CAN_FORMED_USING_B_C_GIVEN_CONSTRAINTS_1` (O0)
+- `cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS` (O0, O1)
+- `cpp_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0, O1, O2)
+- `cpp_transcoder/COUNT_TOTAL_SET_BITS_IN_ALL_NUMBERS_FROM_1_TO_N` (O0)
+- `cpp_transcoder/COUNT_TRAILING_ZEROES_FACTORIAL_NUMBER` (O0)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0, O2)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1` (O0)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0, O2)
+- `cpp_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT` (O0, O1, O2)
+- `cpp_transcoder/DECODE_MEDIAN_STRING_ORIGINAL_STRING` (O0, O1, O2)
+- `cpp_transcoder/DELANNOY_NUMBER_1` (O0, O1, O2)
+- `cpp_transcoder/DICE_THROW_PROBLEM` (O0, O1, O2)
+- `cpp_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M` (O0, O1, O2)
+- `cpp_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `cpp_transcoder/DISTRIBUTING_M_ITEMS_CIRCLE_SIZE_N_STARTING_K_TH_POSITION` (O0)
+- `cpp_transcoder/DIVIDE_LARGE_NUMBER_REPRESENTED_STRING` (O0, O1, O2)
+- `cpp_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `cpp_transcoder/DIVISIBILITY_BY_12_FOR_A_LARGE_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/DIVISIBILITY_BY_7` (O0)
+- `cpp_transcoder/DOUBLE_FACTORIAL` (O0, O2)
+- `cpp_transcoder/DOUBLE_FACTORIAL_1` (O0, O1, O2)
+- `cpp_transcoder/DYCK_PATH` (O0)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_15_LONGEST_BITONIC_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME` (O0, O1, O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_36_CUT_A_ROPE_TO_MAXIMIZE_PRODUCT_1` (O0, O2)
+- `cpp_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0, O1, O2)
+- `cpp_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1` (O0, O1, O2)
+- `cpp_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/EULERIAN_NUMBER_1` (O0, O1, O2)
+- `cpp_transcoder/EULERS_CRITERION_CHECK_IF_SQUARE_ROOT_UNDER_MODULO_P_EXISTS` (O0)
+- `cpp_transcoder/EVEN_FIBONACCI_NUMBERS_SUM` (O0, O1, O2)
+- `cpp_transcoder/FIBONACCI_MODULO_P` (O0)
+- `cpp_transcoder/FINDING_POWER_PRIME_NUMBER_P_N` (O0)
+- `cpp_transcoder/FINDING_POWER_PRIME_NUMBER_P_N_1` (O0)
+- `cpp_transcoder/FIND_A_FIXED_POINT_IN_A_GIVEN_ARRAY` (O0)
+- `cpp_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE` (O0, O1, O2)
+- `cpp_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O0, O1, O2)
+- `cpp_transcoder/FIND_FIRST_NATURAL_NUMBER_WHOSE_FACTORIAL_DIVISIBLE_X` (O0)
+- `cpp_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME` (O0)
+- `cpp_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `cpp_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B` (O0, O1, O2)
+- `cpp_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O0)
+- `cpp_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1` (O0, O1)
+- `cpp_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE` (O0, O1, O2)
+- `cpp_transcoder/FIND_MINIMUM_SUM_FACTORS_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0, O1, O2)
+- `cpp_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES` (O0, O1, O2)
+- `cpp_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O1, O2)
+- `cpp_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FIND_PATTERNS_101_GIVEN_STRING` (O0, O1, O2)
+- `cpp_transcoder/FIND_PERIMETER_CYLINDER` (O0)
+- `cpp_transcoder/FIND_POSITION_GIVEN_NUMBER_AMONG_NUMBERS_MADE_4_7` (O0, O1, O2)
+- `cpp_transcoder/FIND_REPEATING_ELEMENT_SORTED_ARRAY_SIZE_N` (O0)
+- `cpp_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `cpp_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM` (O0, O1, O2)
+- `cpp_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `cpp_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS_1` (O0)
+- `cpp_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `cpp_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER_1` (O0)
+- `cpp_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `cpp_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_MAXIMUM_ELEMENT_IN_AN_ARRAY_WHICH_IS_FIRST_INCREASING_AND_THEN_DECREASING` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY` (O1, O2)
+- `cpp_transcoder/FIND_THE_MISSING_NUMBER_1` (O0)
+- `cpp_transcoder/FIND_THE_MISSING_NUMBER_2` (O0, O2)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0, O1, O2)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `cpp_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `cpp_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1` (O0)
+- `cpp_transcoder/FIND_WHETHER_A_GIVEN_NUMBER_IS_A_POWER_OF_4_OR_NOT_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_WHETHER_GIVEN_INTEGER_POWER_3_NOT` (O0, O1, O2)
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE` (O1, O2)
+- `cpp_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE_1` (O1, O2)
+- `cpp_transcoder/FLOOR_IN_A_SORTED_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FREQUENT_ELEMENT_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM` (O0, O1)
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `cpp_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM` (O0)
+- `cpp_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM_1` (O0, O1, O2)
+- `cpp_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1` (O0, O1, O2)
+- `cpp_transcoder/GIVEN_TWO_STRINGS_FIND_FIRST_STRING_SUBSEQUENCE_SECOND` (O0)
+- `cpp_transcoder/GOOGLE_CASE_GIVEN_SENTENCE` (O0, O1, O2)
+- `cpp_transcoder/HEXAGONAL_NUMBER` (O0)
+- `cpp_transcoder/HIGHWAY_BILLBOARD_PROBLEM` (O0, O1, O2)
+- `cpp_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS` (O0, O1, O2)
+- `cpp_transcoder/HOW_TO_TURN_OFF_A_PARTICULAR_BIT_IN_A_NUMBER` (O0)
+- `cpp_transcoder/HYPERCUBE_GRAPH` (O0)
+- `cpp_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0, O1, O2)
+- `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `cpp_transcoder/LARGEST_SUBSEQUENCE_GCD_GREATER_1` (O0, O1, O2)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE_1` (O0)
+- `cpp_transcoder/LENGTH_LONGEST_SUB_STRING_CAN_MAKE_REMOVED` (O0, O1, O2)
+- `cpp_transcoder/LEONARDO_NUMBER_1` (O0, O1)
+- `cpp_transcoder/LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION` (O1, O2)
+- `cpp_transcoder/LEXICOGRAPHICAL_CONCATENATION_SUBSTRINGS_STRING` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_PALINDROME_SUBSEQUENCE_SPACE` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O0, O1, O2)
+- `cpp_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE` (O0, O1, O2)
+- `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0, O1, O2)
+- `cpp_transcoder/MAXIMIZE_SUM_ARRII` (O0, O1)
+- `cpp_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0, O1, O2)
+- `cpp_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES_1` (O0)
+- `cpp_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_EQULIBRIUM_SUM_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_NUMBER_2X2_SQUARES_CAN_FIT_INSIDE_RIGHT_ISOSCELES_TRIANGLE` (O0)
+- `cpp_transcoder/MAXIMUM_NUMBER_OF_SQUARES_THAT_CAN_BE_FIT_IN_A_RIGHT_ANGLE_ISOSCELES_TRIANGLE` (O0)
+- `cpp_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_POINTS_INTERSECTION_N_CIRCLES` (O0)
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_TWICE` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_ALTERNATING_SUBSEQUENCE_SUM` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0, O1)
+- `cpp_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING` (O0, O1)
+- `cpp_transcoder/MIDDLE_OF_THREE_USING_MINIMUM_COMPARISONS_2` (O0)
+- `cpp_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL` (O0, O1, O2)
+- `cpp_transcoder/MINIMIZE_THE_MAXIMUM_DIFFERENCE_BETWEEN_THE_HEIGHTS` (O0, O1, O2)
+- `cpp_transcoder/MINIMIZE_THE_SUM_OF_DIGITS_OF_A_AND_B_SUCH_THAT_A_B_N` (O0)
+- `cpp_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O1, O2)
+- `cpp_transcoder/MINIMUM_COST_MAKE_ARRAY_SIZE_1_REMOVING_LARGER_PAIRS` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_INCREMENT_K_OPERATIONS_MAKE_ELEMENTS_EQUAL` (O0, O1)
+- `cpp_transcoder/MINIMUM_INSERTIONS_SORT_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_1` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_2` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `cpp_transcoder/MINIMUM_ROTATIONS_REQUIRED_GET_STRING` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION` (O0, O1, O2)
+- `cpp_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0, O1, O2)
+- `cpp_transcoder/MIN_FLIPS_OF_CONTINUOUS_CHARACTERS_TO_MAKE_ALL_CHARACTERS_SAME_IN_A_STRING` (O0, O2)
+- `cpp_transcoder/MODULAR_EXPONENTIATION_POWER_IN_MODULAR_ARITHMETIC` (O0)
+- `cpp_transcoder/MODULUS_TWO_FLOAT_DOUBLE_NUMBERS` (O1, O2)
+- `cpp_transcoder/MULTIPLY_AN_INTEGER_WITH_3_5` (O0)
+- `cpp_transcoder/MULTIPLY_LARGE_INTEGERS_UNDER_LARGE_MODULO` (O0)
+- `cpp_transcoder/NEWMAN_CONWAY_SEQUENCE_1` (O0, O1)
+- `cpp_transcoder/NEXT_POWER_OF_2` (O0, O1, O2)
+- `cpp_transcoder/NEXT_POWER_OF_2_1` (O0, O1, O2)
+- `cpp_transcoder/NEXT_POWER_OF_2_2` (O0, O1, O2)
+- `cpp_transcoder/NTH_NON_FIBONACCI_NUMBER` (O0)
+- `cpp_transcoder/NTH_PENTAGONAL_NUMBER` (O0)
+- `cpp_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `cpp_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `cpp_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N_1` (O0)
+- `cpp_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH` (O0, O1)
+- `cpp_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `cpp_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0)
+- `cpp_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0, O2)
+- `cpp_transcoder/NUMBER_RECTANGLES_NM_GRID` (O0)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_STRING_DIVISIBLE_N` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_SUBSTRINGS_DIVISIBLE_4_STRING_INTEGERS` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_SUBSTRINGS_STRING` (O0, O1, O2)
+- `cpp_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N` (O0, O1, O2)
+- `cpp_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN` (O0)
+- `cpp_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1` (O0)
+- `cpp_transcoder/N_TH_TERM_SERIES_2_12_36_80_150` (O0)
+- `cpp_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0, O2)
+- `cpp_transcoder/PADOVAN_SEQUENCE` (O0)
+- `cpp_transcoder/PAPER_CUT_MINIMUM_NUMBER_SQUARES` (O0, O1, O2)
+- `cpp_transcoder/PARTITION_INTO_TWO_SUBARRAYS_OF_LENGTHS_K_AND_N_K_SUCH_THAT_THE_DIFFERENCE_OF_SUMS_IS_MAXIMUM` (O0, O1, O2)
+- `cpp_transcoder/PERFECT_REVERSIBLE_STRING` (O1, O2)
+- `cpp_transcoder/PERMUTE_TWO_ARRAYS_SUM_EVERY_PAIR_GREATER_EQUAL_K` (O0, O1, O2)
+- `cpp_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `cpp_transcoder/POLICEMEN_CATCH_THIEVES` (O0, O1, O2)
+- `cpp_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `cpp_transcoder/POSITION_OF_RIGHTMOST_SET_BIT_1` (O0)
+- `cpp_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD_1` (O0)
+- `cpp_transcoder/PRINT_WORDS_STRING_REVERSE_ORDER` (O0, O1, O2)
+- `cpp_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_AREA_SQUARE` (O0)
+- `cpp_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION` (O0)
+- `cpp_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION_1` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE` (O0)
+- `cpp_transcoder/PROGRAM_CHECK_INPUT_INTEGER_STRING` (O1, O2)
+- `cpp_transcoder/PROGRAM_COUNT_OCCURRENCE_GIVEN_CHARACTER_STRING` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_FIND_STRING_START_END_GEEKS` (O1, O2)
+- `cpp_transcoder/PROGRAM_FOR_DEADLOCK_FREE_CONDITION_IN_OPERATING_SYSTEM` (O0)
+- `cpp_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER` (O0, O2)
+- `cpp_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0, O2)
+- `cpp_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0, O2)
+- `cpp_transcoder/PROGRAM_OCTAL_DECIMAL_CONVERSION` (O0)
+- `cpp_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `cpp_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR` (O0)
+- `cpp_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_1` (O0, O1, O2)
+- `cpp_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_2` (O0)
+- `cpp_transcoder/PYTHAGOREAN_QUADRUPLE` (O0)
+- `cpp_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE` (O0)
+- `cpp_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE_1` (O0)
+- `cpp_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `cpp_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O1, O2)
+- `cpp_transcoder/REARRANGE_ARRAY_MAXIMUM_MINIMUM_FORM_SET_2_O1_EXTRA_SPACE` (O0, O2)
+- `cpp_transcoder/REARRANGE_ARRAY_MAXIMUM_MINIMUM_FORM_SET_2_O1_EXTRA_SPACE_1` (O0, O1, O2)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0, O1, O2)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O0, O1, O2)
+- `cpp_transcoder/RECURSIVE_C_PROGRAM_LINEARLY_SEARCH_ELEMENT_GIVEN_ARRAY` (O0)
+- `cpp_transcoder/RECURSIVE_PROGRAM_PRIME_NUMBER` (O0)
+- `cpp_transcoder/REMAINDER_7_LARGE_NUMBERS` (O0, O1, O2)
+- `cpp_transcoder/REMOVE_MINIMUM_ELEMENTS_EITHER_SIDE_2MIN_MAX` (O0, O2)
+- `cpp_transcoder/REPLACE_CHARACTER_C1_C2_C2_C1_STRING_S` (O0, O1, O2)
+- `cpp_transcoder/ROUND_THE_GIVEN_NUMBER_TO_NEAREST_MULTIPLE_OF_10` (O0)
+- `cpp_transcoder/SCHEDULE_ELEVATOR_TO_REDUCE_THE_TOTAL_TIME_TAKEN` (O0, O1, O2)
+- `cpp_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+- `cpp_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0, O1, O2)
+- `cpp_transcoder/SEARCH_INSERT_AND_DELETE_IN_AN_UNSORTED_ARRAY` (O2)
+- `cpp_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS` (O0)
+- `cpp_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1` (O0, O1, O2)
+- `cpp_transcoder/SIZE_SUBARRAY_MAXIMUM_SUM` (O0)
+- `cpp_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS` (O0, O1, O2)
+- `cpp_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_1` (O1, O2)
+- `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS` (O0, O1, O2)
+- `cpp_transcoder/SORT_ARRAY_CONTAIN_1_N_VALUES` (O0, O2)
+- `cpp_transcoder/SORT_EVEN_PLACED_ELEMENTS_INCREASING_ODD_PLACED_DECREASING_ORDER` (O1, O2)
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM` (O0, O1, O2)
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1` (O0, O1, O2)
+- `cpp_transcoder/SPACE_OPTIMIZED_SOLUTION_LCS` (O0, O1, O2)
+- `cpp_transcoder/SPLIT_N_MAXIMUM_COMPOSITE_NUMBERS` (O0)
+- `cpp_transcoder/SQUARED_TRIANGULAR_NUMBER_SUM_CUBES` (O0)
+- `cpp_transcoder/SQUARE_PYRAMIDAL_NUMBER_SUM_SQUARES` (O0)
+- `cpp_transcoder/SQUARE_ROOT_OF_AN_INTEGER` (O0)
+- `cpp_transcoder/SQUARE_ROOT_OF_AN_INTEGER_1` (O0)
+- `cpp_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0)
+- `cpp_transcoder/STRING_CONTAINING_FIRST_LETTER_EVERY_WORD_GIVEN_STRING_SPACES` (O0, O1, O2)
+- `cpp_transcoder/STRING_K_DISTINCT_CHARACTERS_NO_CHARACTERS_ADJACENT` (O0, O1, O2)
+- `cpp_transcoder/SUM_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `cpp_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `cpp_transcoder/SUM_FIBONACCI_NUMBERS` (O0, O1)
+- `cpp_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS` (O0)
+- `cpp_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS_1` (O0)
+- `cpp_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N` (O0, O1)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS` (O0, O1, O2)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0, O1, O2)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_2` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN_1` (O0)
+- `cpp_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `cpp_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE` (O0)
+- `cpp_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE_1` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0, O1, O2)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS_2` (O0, O1, O2)
+- `cpp_transcoder/SUM_SERIES_12_32_52_2N_12` (O0)
+- `cpp_transcoder/SUM_SERIES_12_32_52_2N_12_1` (O0)
+- `cpp_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS` (O0, O1, O2)
+- `cpp_transcoder/TAIL_RECURSION` (O0, O2)
+- `cpp_transcoder/TAIL_RECURSION_FIBONACCI` (O0)
+- `cpp_transcoder/TOTAL_NUMBER_OF_NON_DECREASING_NUMBERS_WITH_N_DIGITS_1` (O0, O1, O2)
+- `cpp_transcoder/TRIANGULAR_MATCHSTICK_NUMBER` (O0)
+- `cpp_transcoder/TRIANGULAR_NUMBERS` (O0)
+- `cpp_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED` (O0, O1, O2)
+- `cpp_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0, O1, O2)
+- `cpp_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS` (O0, O1)
+- `cpp_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O0, O1, O2)
+- `cpp_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0, O1, O2)
+- `cpp_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0, O1, O2)
+- `cpp_transcoder/ZECKENDORFS_THEOREM_NON_NEIGHBOURING_FIBONACCI_REPRESENTATION` (O0)
+- `go_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O2)
+- `go_transcoder/AREA_SQUARE_CIRCUMSCRIBED_CIRCLE` (O0, O1, O2)
+- `go_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0, O1, O2)
+- `go_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `go_transcoder/BIRTHDAY_PARADOX` (O0, O1, O2)
+- `go_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION` (O0, O1, O2)
+- `go_transcoder/CEILING_IN_A_SORTED_ARRAY` (O0)
+- `go_transcoder/CEILING_IN_A_SORTED_ARRAY_1` (O0)
+- `go_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `go_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O1, O2)
+- `go_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `go_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O1, O2)
+- `go_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `go_transcoder/CHECK_INTEGER_OVERFLOW_MULTIPLICATION` (O0, O1, O2)
+- `go_transcoder/CHECK_NUMBER_IS_PERFECT_SQUARE_USING_ADDITIONSUBTRACTION` (O0)
+- `go_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0, O1, O2)
+- `go_transcoder/CHECK_WHETHER_TRIANGLE_VALID_NOT_SIDES_GIVEN` (O0)
+- `go_transcoder/CIRCLE_LATTICE_POINTS` (O0, O1, O2)
+- `go_transcoder/COMPOSITE_NUMBER` (O0)
+- `go_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW` (O0)
+- `go_transcoder/COMPUTE_AVERAGE_TWO_NUMBERS_WITHOUT_OVERFLOW_1` (O0, O1, O2)
+- `go_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `go_transcoder/COUNT_CHARACTERS_STRING_DISTANCE_ENGLISH_ALPHABETS` (O0, O1, O2)
+- `go_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0, O1, O2)
+- `go_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2` (O0)
+- `go_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0, O1, O2)
+- `go_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0, O1, O2)
+- `go_transcoder/COUNT_FACTORIAL_NUMBERS_IN_A_GIVEN_RANGE` (O0)
+- `go_transcoder/COUNT_FIBONACCI_NUMBERS_GIVEN_RANGE_LOG_TIME` (O0)
+- `go_transcoder/COUNT_FREQUENCY_K_MATRIX_SIZE_N_MATRIXI_J_IJ` (O0)
+- `go_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0, O2)
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY` (O0)
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0)
+- `go_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0, O1, O2)
+- `go_transcoder/COUNT_NUMBERS_THAT_DONT_CONTAIN_3` (O0)
+- `go_transcoder/COUNT_NUMBER_PAIRS_N_B_N_GCD_B_B` (O0, O1, O2)
+- `go_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0, O1, O2)
+- `go_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K` (O0, O2)
+- `go_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K_1` (O0, O1, O2)
+- `go_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `go_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `go_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `go_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_1` (O0)
+- `go_transcoder/COUNT_SET_BITS_IN_AN_INTEGER_3` (O0)
+- `go_transcoder/COUNT_STRINGS_CAN_FORMED_USING_B_C_GIVEN_CONSTRAINTS_1` (O0, O1, O2)
+- `go_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0, O1, O2)
+- `go_transcoder/COUNT_TRAILING_ZEROES_FACTORIAL_NUMBER` (O0)
+- `go_transcoder/C_PROGRAM_FACTORIAL_NUMBER` (O0, O2)
+- `go_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1` (O0, O2)
+- `go_transcoder/C_PROGRAM_FACTORIAL_NUMBER_2` (O0, O2)
+- `go_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0, O1, O2)
+- `go_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `go_transcoder/DISTRIBUTING_M_ITEMS_CIRCLE_SIZE_N_STARTING_K_TH_POSITION` (O0)
+- `go_transcoder/DIVISIBILITY_9_USING_BITWISE_OPERATORS` (O0)
+- `go_transcoder/DIVISIBILITY_BY_7` (O0)
+- `go_transcoder/DOUBLE_FACTORIAL` (O0, O2)
+- `go_transcoder/DYCK_PATH` (O0)
+- `go_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM` (O0, O1, O2)
+- `go_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0)
+- `go_transcoder/EFFICIENT_WAY_TO_MULTIPLY_WITH_7` (O0)
+- `go_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY` (O0, O2)
+- `go_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0)
+- `go_transcoder/EULERS_CRITERION_CHECK_IF_SQUARE_ROOT_UNDER_MODULO_P_EXISTS` (O0)
+- `go_transcoder/EVEN_FIBONACCI_NUMBERS_SUM` (O0, O1, O2)
+- `go_transcoder/FIBONACCI_MODULO_P` (O0)
+- `go_transcoder/FINDING_POWER_PRIME_NUMBER_P_N` (O0)
+- `go_transcoder/FINDING_POWER_PRIME_NUMBER_P_N_1` (O0)
+- `go_transcoder/FIND_FIRST_NATURAL_NUMBER_WHOSE_FACTORIAL_DIVISIBLE_X` (O0)
+- `go_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME` (O0)
+- `go_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1` (O0, O1, O2)
+- `go_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `go_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0, O1, O2)
+- `go_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR` (O0, O1, O2)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0, O1, O2)
+- `go_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0, O1, O2)
+- `go_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0, O1, O2)
+- `go_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O1, O2)
+- `go_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0, O1, O2)
+- `go_transcoder/FIND_PERIMETER_CYLINDER` (O0, O1, O2)
+- `go_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `go_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0)
+- `go_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `go_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS_1` (O0)
+- `go_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `go_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER_1` (O0)
+- `go_transcoder/FIND_SUM_ODD_FACTORS_NUMBER` (O0, O1, O2)
+- `go_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `go_transcoder/FIND_THE_FIRST_MISSING_NUMBER` (O0, O1, O2)
+- `go_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0, O1, O2)
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS` (O0, O1, O2)
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS_1` (O0, O1, O2)
+- `go_transcoder/FIND_THE_MISSING_NUMBER_1` (O0)
+- `go_transcoder/FIND_THE_MISSING_NUMBER_2` (O0)
+- `go_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `go_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `go_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `go_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1` (O0, O1, O2)
+- `go_transcoder/FREQUENT_ELEMENT_ARRAY` (O0, O1, O2)
+- `go_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `go_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM` (O0)
+- `go_transcoder/GIVEN_A_SORTED_AND_ROTATED_ARRAY_FIND_IF_THERE_IS_A_PAIR_WITH_A_GIVEN_SUM_1` (O0)
+- `go_transcoder/HEIGHT_COMPLETE_BINARY_TREE_HEAP_N_NODES` (O0, O1, O2)
+- `go_transcoder/HEXAGONAL_NUMBER` (O0)
+- `go_transcoder/HORNERS_METHOD_POLYNOMIAL_EVALUATION` (O0)
+- `go_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0)
+- `go_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1` (O0)
+- `go_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0, O1, O2)
+- `go_transcoder/HOW_TO_TURN_OFF_A_PARTICULAR_BIT_IN_A_NUMBER` (O0)
+- `go_transcoder/HYPERCUBE_GRAPH` (O0)
+- `go_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `go_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2` (O0, O1, O2)
+- `go_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0, O1, O2)
+- `go_transcoder/MAXIMIZE_SUM_ARRII` (O0, O1, O2)
+- `go_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0, O1, O2)
+- `go_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0, O1, O2)
+- `go_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES_1` (O0)
+- `go_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES` (O0)
+- `go_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES_1` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_NUMBER_2X2_SQUARES_CAN_FIT_INSIDE_RIGHT_ISOSCELES_TRIANGLE` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_POINTS_INTERSECTION_N_CIRCLES` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0, O1)
+- `go_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY_1` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0, O1)
+- `go_transcoder/MIDDLE_OF_THREE_USING_MINIMUM_COMPARISONS_1` (O1, O2)
+- `go_transcoder/MIDDLE_OF_THREE_USING_MINIMUM_COMPARISONS_2` (O0)
+- `go_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0, O1, O2)
+- `go_transcoder/MINIMIZE_THE_SUM_OF_DIGITS_OF_A_AND_B_SUCH_THAT_A_B_N` (O0, O1, O2)
+- `go_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O1, O2)
+- `go_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY` (O0, O1, O2)
+- `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0, O1, O2)
+- `go_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0, O1, O2)
+- `go_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE` (O0, O1, O2)
+- `go_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O0, O1, O2)
+- `go_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0, O1, O2)
+- `go_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `go_transcoder/MINIMUM_PERIMETER_N_BLOCKS` (O0, O1, O2)
+- `go_transcoder/MINIMUM_ROTATIONS_UNLOCK_CIRCULAR_LOCK` (O0, O1, O2)
+- `go_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS` (O0, O1, O2)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0, O1, O2)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0, O1, O2)
+- `go_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE` (O0, O1, O2)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0, O1, O2)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0, O1, O2)
+- `go_transcoder/MODULAR_EXPONENTIATION_POWER_IN_MODULAR_ARITHMETIC` (O0)
+- `go_transcoder/MULTIPLY_AN_INTEGER_WITH_3_5` (O0)
+- `go_transcoder/NEXT_POWER_OF_2` (O0, O1, O2)
+- `go_transcoder/NEXT_POWER_OF_2_1` (O0)
+- `go_transcoder/NON_REPEATING_ELEMENT` (O0)
+- `go_transcoder/NTH_NON_FIBONACCI_NUMBER` (O0, O1, O2)
+- `go_transcoder/NTH_PENTAGONAL_NUMBER` (O0)
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0, O1, O2)
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1` (O0, O1, O2)
+- `go_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `go_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0, O1, O2)
+- `go_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `go_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N_1` (O0)
+- `go_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `go_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0, O2)
+- `go_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0, O2)
+- `go_transcoder/NUMBER_RECTANGLES_NM_GRID` (O0, O1, O2)
+- `go_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0, O1, O2)
+- `go_transcoder/NUMBER_SUBSTRINGS_STRING` (O0)
+- `go_transcoder/NUMBER_TRIANGLES_N_MOVES_1` (O0, O1, O2)
+- `go_transcoder/NUMBER_UNIQUE_RECTANGLES_FORMED_USING_N_UNIT_SQUARES` (O0, O1, O2)
+- `go_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES` (O0, O1, O2)
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN` (O0)
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1` (O0, O1, O2)
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2` (O0, O1, O2)
+- `go_transcoder/N_TH_TERM_SERIES_2_12_36_80_150` (O0)
+- `go_transcoder/ONE_LINE_FUNCTION_FOR_FACTORIAL_OF_A_NUMBER` (O0, O2)
+- `go_transcoder/PADOVAN_SEQUENCE` (O0)
+- `go_transcoder/PAINTING_FENCE_ALGORITHM` (O0)
+- `go_transcoder/PAIR_WITH_GIVEN_PRODUCT_SET_1_FIND_IF_ANY_PAIR_EXISTS` (O0)
+- `go_transcoder/PERFECT_REVERSIBLE_STRING` (O1, O2)
+- `go_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `go_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `go_transcoder/POSITION_OF_RIGHTMOST_SET_BIT_1` (O0)
+- `go_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD_1` (O0, O1, O2)
+- `go_transcoder/PROBABILITY_THREE_RANDOMLY_CHOSEN_NUMBERS_AP` (O0)
+- `go_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND` (O0, O1, O2)
+- `go_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `go_transcoder/PROGRAM_AREA_SQUARE` (O0)
+- `go_transcoder/PROGRAM_BINARY_DECIMAL_CONVERSION` (O0, O1, O2)
+- `go_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE_1` (O2)
+- `go_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0, O1, O2)
+- `go_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE` (O0, O1, O2)
+- `go_transcoder/PROGRAM_FOR_DEADLOCK_FREE_CONDITION_IN_OPERATING_SYSTEM` (O0)
+- `go_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `go_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_2` (O0, O2)
+- `go_transcoder/PROGRAM_OCTAL_DECIMAL_CONVERSION` (O0)
+- `go_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `go_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR` (O0, O1, O2)
+- `go_transcoder/PROGRAM_TO_FIND_REMAINDER_WITHOUT_USING_MODULO_OR_OPERATOR_2` (O0)
+- `go_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE` (O0)
+- `go_transcoder/PYTHON_PROGRAM_FIND_PERIMETER_CIRCUMFERENCE_SQUARE_RECTANGLE_1` (O0)
+- `go_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `go_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O1, O2)
+- `go_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0, O1, O2)
+- `go_transcoder/ROUND_THE_GIVEN_NUMBER_TO_NEAREST_MULTIPLE_OF_10` (O0)
+- `go_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+- `go_transcoder/SEARCH_INSERT_AND_DELETE_IN_AN_UNSORTED_ARRAY` (O0)
+- `go_transcoder/SEARCH_INSERT_AND_DELETE_IN_A_SORTED_ARRAY_1` (O0)
+- `go_transcoder/SMALLEST_OF_THREE_INTEGERS_WITHOUT_COMPARISON_OPERATORS` (O0, O1, O2)
+- `go_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N` (O0, O1, O2)
+- `go_transcoder/SMALLEST_POWER_OF_2_GREATER_THAN_OR_EQUAL_TO_N_1` (O1, O2)
+- `go_transcoder/SQUARED_TRIANGULAR_NUMBER_SUM_CUBES` (O0)
+- `go_transcoder/SQUARE_PYRAMIDAL_NUMBER_SUM_SQUARES` (O0)
+- `go_transcoder/SQUARE_ROOT_OF_AN_INTEGER` (O0)
+- `go_transcoder/SQUARE_ROOT_OF_AN_INTEGER_1` (O0)
+- `go_transcoder/STEINS_ALGORITHM_FOR_FINDING_GCD_1` (O0)
+- `go_transcoder/SUBSEQUENCES_SIZE_THREE_ARRAY_WHOSE_SUM_DIVISIBLE_M` (O0)
+- `go_transcoder/SUM_DIVISORS_1_N_1` (O0, O1, O2)
+- `go_transcoder/SUM_FACTORS_NUMBER` (O0, O1, O2)
+- `go_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS` (O0)
+- `go_transcoder/SUM_K_TH_GROUP_ODD_POSITIVE_NUMBERS_1` (O0)
+- `go_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS` (O0, O1, O2)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_2` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN_1` (O0)
+- `go_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0, O1, O2)
+- `go_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0, O1, O2)
+- `go_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `go_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0, O1, O2)
+- `go_transcoder/SUM_SERIES_12_32_52_2N_12_1` (O0, O1, O2)
+- `go_transcoder/SUM_SERIES_555555_N_TERMS` (O0, O1, O2)
+- `go_transcoder/SWAP_TWO_NIBBLES_BYTE` (O1, O2)
+- `go_transcoder/TAIL_RECURSION` (O0, O2)
+- `go_transcoder/TRIANGULAR_MATCHSTICK_NUMBER` (O0)
+- `go_transcoder/TRIANGULAR_NUMBERS` (O0)
+- `go_transcoder/TRIANGULAR_NUMBERS_1` (O0)
+- `go_transcoder/TURN_OFF_THE_RIGHTMOST_SET_BIT` (O0)
+- `go_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0, O1, O2)
+- `go_transcoder/WRITE_AN_EFFICIENT_METHOD_TO_CHECK_IF_A_NUMBER_IS_MULTIPLE_OF_3` (O0, O1, O2)
+- `go_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0, O1, O2)
+- `go_transcoder/ZECKENDORFS_THEOREM_NON_NEIGHBOURING_FIBONACCI_REPRESENTATION` (O0)
+
+</details>
+
+<details><summary>math helpers/intrinsics: 69 benchmarks in at least one optimization level</summary>
+
+- O0: 68
+- O1: 52
+- O2: 52
+
+- `c_transcoder/AREA_OF_A_HEXAGON` (O0)
+- `c_transcoder/BIRTHDAY_PARADOX` (O0, O1, O2)
+- `c_transcoder/CALCULATE_VOLUME_DODECAHEDRON` (O0, O1, O2)
+- `c_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION` (O0, O1, O2)
+- `c_transcoder/CIRCLE_LATTICE_POINTS` (O0, O1, O2)
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0, O1, O2)
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_2` (O0)
+- `c_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0, O1, O2)
+- `c_transcoder/FIND_HARMONIC_MEAN_USING_ARITHMETIC_MEAN_GEOMETRIC_MEAN` (O0, O1, O2)
+- `c_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1` (O0)
+- `c_transcoder/FIND_LARGEST_PRIME_FACTOR_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0, O1, O2)
+- `c_transcoder/FIND_SUM_ODD_FACTORS_NUMBER` (O0, O1, O2)
+- `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1` (O0, O1, O2)
+- `c_transcoder/FIND_VALUE_OF_Y_MOD_2_RAISED_TO_POWER_X` (O0)
+- `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES_1` (O0, O1, O2)
+- `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0, O1, O2)
+- `c_transcoder/MINIMUM_PERIMETER_N_BLOCKS` (O0, O1, O2)
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1` (O0, O1, O2)
+- `c_transcoder/NUMBER_TRIANGLES_N_MOVES_1` (O0, O1, O2)
+- `c_transcoder/NUMBER_UNIQUE_RECTANGLES_FORMED_USING_N_UNIT_SQUARES` (O0, O1, O2)
+- `c_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES` (O0, O1, O2)
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1` (O0)
+- `c_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2` (O0, O1, O2)
+- `c_transcoder/PRIMALITY_TEST_SET_5USING_LUCAS_LEHMER_SERIES` (O0, O1, O2)
+- `c_transcoder/PROGRAM_CALCULATE_AREA_OCTAGON` (O0)
+- `c_transcoder/PROGRAM_CALCULATE_VOLUME_OCTAHEDRON` (O0)
+- `c_transcoder/PROGRAM_FOR_SURFACE_AREA_OF_OCTAHEDRON` (O0)
+- `c_transcoder/PROGRAM_TO_FIND_THE_AREA_OF_PENTAGON` (O0)
+- `c_transcoder/SUM_FACTORS_NUMBER` (O0, O1, O2)
+- `c_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0, O1, O2)
+- `c_transcoder/SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS` (O0, O1, O2)
+- `c_transcoder/SUM_SERIES_555555_N_TERMS` (O0, O1, O2)
+- `c_transcoder/TRIANGULAR_NUMBERS_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0, O1, O2)
+- `cpp_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `cpp_transcoder/DOUBLE_FACTORIAL_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_MINIMUM_SUM_FACTORS_NUMBER` (O0, O1, O2)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O1, O2)
+- `go_transcoder/AREA_OF_A_HEXAGON` (O0)
+- `go_transcoder/BIRTHDAY_PARADOX` (O0, O1, O2)
+- `go_transcoder/CALCULATE_VOLUME_DODECAHEDRON` (O0, O1, O2)
+- `go_transcoder/CALCULATING_FACTORIALS_USING_STIRLING_APPROXIMATION` (O0, O1, O2)
+- `go_transcoder/CIRCLE_LATTICE_POINTS` (O0, O1, O2)
+- `go_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0, O1, O2)
+- `go_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2_1` (O0, O1, O2)
+- `go_transcoder/FIND_HARMONIC_MEAN_USING_ARITHMETIC_MEAN_GEOMETRIC_MEAN` (O0, O1, O2)
+- `go_transcoder/FIND_INDEX_GIVEN_FIBONACCI_NUMBER_CONSTANT_TIME_1` (O0)
+- `go_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0, O1, O2)
+- `go_transcoder/FIND_SUM_ODD_FACTORS_NUMBER` (O0, O1, O2)
+- `go_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y_1` (O0, O1, O2)
+- `go_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES_1` (O0, O1, O2)
+- `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0, O1, O2)
+- `go_transcoder/MINIMUM_PERIMETER_N_BLOCKS` (O0, O1, O2)
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1` (O0, O1, O2)
+- `go_transcoder/NUMBER_TRIANGLES_N_MOVES_1` (O0, O1, O2)
+- `go_transcoder/NUMBER_UNIQUE_RECTANGLES_FORMED_USING_N_UNIT_SQUARES` (O0, O1, O2)
+- `go_transcoder/NUMBER_WAYS_NODE_MAKE_LOOP_SIZE_K_UNDIRECTED_COMPLETE_CONNECTED_GRAPH_N_NODES` (O0, O1, O2)
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_1` (O0)
+- `go_transcoder/N_TH_NUMBER_WHOSE_SUM_OF_DIGITS_IS_TEN_2` (O0, O1, O2)
+- `go_transcoder/PROGRAM_CALCULATE_AREA_OCTAGON` (O0)
+- `go_transcoder/PROGRAM_CALCULATE_VOLUME_OCTAHEDRON` (O0)
+- `go_transcoder/PROGRAM_FOR_SURFACE_AREA_OF_OCTAHEDRON` (O0)
+- `go_transcoder/PROGRAM_TO_FIND_THE_AREA_OF_PENTAGON` (O0)
+- `go_transcoder/SUM_FACTORS_NUMBER` (O0, O1, O2)
+- `go_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0, O1, O2)
+- `go_transcoder/SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS` (O0, O1, O2)
+- `go_transcoder/SUM_SERIES_555555_N_TERMS` (O0, O1, O2)
+- `go_transcoder/TRIANGULAR_NUMBERS_1` (O0, O1, O2)
+
+</details>
+
+<details><summary>other direct calls: 576 benchmarks in at least one optimization level</summary>
+
+- O0: 410
+- O1: 15
+- O2: 172
+
+- `c_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0)
+- `c_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0)
+- `c_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET` (O2)
+- `c_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `c_transcoder/CALCULATE_MAXIMUM_VALUE_USING_SIGN_TWO_NUMBERS_STRING` (O0)
+- `c_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `c_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O0)
+- `c_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `c_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O0)
+- `c_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED` (O2)
+- `c_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0)
+- `c_transcoder/CHECK_WHETHER_ARITHMETIC_PROGRESSION_CAN_FORMED_GIVEN_ARRAY` (O0)
+- `c_transcoder/CIRCLE_LATTICE_POINTS` (O0)
+- `c_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION` (O2)
+- `c_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `c_transcoder/CONVERTING_ONE_STRING_USING_APPEND_DELETE_LAST_OPERATIONS` (O0)
+- `c_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1` (O2)
+- `c_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1` (O2)
+- `c_transcoder/COUNT_CHARACTERS_POSITION_ENGLISH_ALPHABETS` (O0)
+- `c_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1` (O2)
+- `c_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0)
+- `c_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O0, O2)
+- `c_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `c_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0)
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY` (O0)
+- `c_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0)
+- `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0)
+- `c_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S` (O2)
+- `c_transcoder/COUNT_NUMBER_INCREASING_SUBSEQUENCES_SIZE_K` (O2)
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1` (O2)
+- `c_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES` (O2)
+- `c_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME` (O2)
+- `c_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES` (O2)
+- `c_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0)
+- `c_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4` (O2)
+- `c_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K` (O0)
+- `c_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `c_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `c_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING` (O2)
+- `c_transcoder/COUNT_POSSIBLE_GROUPS_SIZE_2_3_SUM_MULTIPLE_3` (O0)
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1` (O2)
+- `c_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `c_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `c_transcoder/COUNT_ROTATIONS_DIVISIBLE_8` (O0)
+- `c_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE` (O2)
+- `c_transcoder/COUNT_STRINGS_WITH_CONSECUTIVE_1S` (O2)
+- `c_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0)
+- `c_transcoder/COUNT_WAYS_BUILD_STREET_GIVEN_CONSTRAINTS` (O2)
+- `c_transcoder/DECIMAL_REPRESENTATION_GIVEN_BINARY_STRING_DIVISIBLE_10_NOT` (O0)
+- `c_transcoder/DELANNOY_NUMBER_1` (O2)
+- `c_transcoder/DICE_THROW_PROBLEM` (O2)
+- `c_transcoder/DICE_THROW_PROBLEM_1` (O2)
+- `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0)
+- `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW` (O2)
+- `c_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M` (O2)
+- `c_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `c_transcoder/DYCK_PATH` (O0)
+- `c_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM` (O0)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1` (O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD` (O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_14_MAXIMUM_SUM_INCREASING_SUBSEQUENCE` (O2)
+- `c_transcoder/DYNAMIC_PROGRAMMING_SET_8_MATRIX_CHAIN_MULTIPLICATION_1` (O2)
+- `c_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0)
+- `c_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1` (O0)
+- `c_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY` (O0)
+- `c_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0)
+- `c_transcoder/EULERIAN_NUMBER_1` (O2)
+- `c_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE` (O2)
+- `c_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O2)
+- `c_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `c_transcoder/FIND_LARGEST_D_IN_ARRAY_SUCH_THAT_A_B_C_D` (O0)
+- `c_transcoder/FIND_LARGEST_PRIME_FACTOR_NUMBER` (O0)
+- `c_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B` (O0)
+- `c_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0)
+- `c_transcoder/FIND_MAXIMUM_DOT_PRODUCT_TWO_ARRAYS_INSERTION_0S` (O2)
+- `c_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY` (O0)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O0)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR` (O0)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0, O1, O2)
+- `c_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1` (O2)
+- `c_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE` (O2)
+- `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `c_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `c_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES` (O2)
+- `c_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O0)
+- `c_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0)
+- `c_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `c_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0)
+- `c_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `c_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS` (O2)
+- `c_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `c_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT` (O2)
+- `c_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `c_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0)
+- `c_transcoder/FIND_THE_MAXIMUM_SUBARRAY_XOR_IN_A_GIVEN_ARRAY` (O0)
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS` (O0)
+- `c_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS_1` (O0)
+- `c_transcoder/FIND_THE_MISSING_NUMBER_2` (O0)
+- `c_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `c_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `c_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1` (O0)
+- `c_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1_1` (O0)
+- `c_transcoder/FIRST_UPPERCASE_LETTER_IN_A_STRING_ITERATIVE_AND_RECURSIVE` (O0, O1, O2)
+- `c_transcoder/FLOOR_IN_A_SORTED_ARRAY` (O0)
+- `c_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM` (O2)
+- `c_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `c_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1` (O2)
+- `c_transcoder/HEXAGONAL_NUMBER` (O0)
+- `c_transcoder/HIGHWAY_BILLBOARD_PROBLEM` (O2)
+- `c_transcoder/HORNERS_METHOD_POLYNOMIAL_EVALUATION` (O0)
+- `c_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0)
+- `c_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1` (O0)
+- `c_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0)
+- `c_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS` (O2)
+- `c_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1` (O0)
+- `c_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0)
+- `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1)
+- `c_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2` (O0)
+- `c_transcoder/LENGTH_OF_THE_LONGEST_ARITHMATIC_PROGRESSION_IN_A_SORTED_ARRAY` (O2)
+- `c_transcoder/LEONARDO_NUMBER_1` (O2)
+- `c_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS` (O2)
+- `c_transcoder/LONGEST_COMMON_SUBSTRING_SPACE_OPTIMIZED_DP_SOLUTION` (O2)
+- `c_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE` (O0, O1, O2)
+- `c_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O2)
+- `c_transcoder/LONGEST_REPEATING_SUBSEQUENCE` (O2)
+- `c_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE` (O2)
+- `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `c_transcoder/MAXIMIZE_ARRAY_ELEMENTS_UPTO_GIVEN_NUMBER` (O2)
+- `c_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `c_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0)
+- `c_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `c_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE` (O2)
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING` (O0)
+- `c_transcoder/MAXIMUM_CONSECUTIVE_REPEATING_CHARACTER_STRING_1` (O0)
+- `c_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES` (O0)
+- `c_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1` (O2)
+- `c_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C` (O2)
+- `c_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1` (O0)
+- `c_transcoder/MAXIMUM_PRODUCT_SUBARRAY_ADDED_NEGATIVE_PRODUCT_CASE` (O0)
+- `c_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES_1` (O2)
+- `c_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `c_transcoder/MAXIMUM_SUBARRAY_SUM_ARRAY_CREATED_REPEATED_CONCATENATION` (O0)
+- `c_transcoder/MAXIMUM_SUM_BITONIC_SUBARRAY` (O2)
+- `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY` (O0)
+- `c_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY_1` (O0)
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O2)
+- `c_transcoder/MAXIMUM_SUM_SUBARRAY_REMOVING_ONE_ELEMENT` (O2)
+- `c_transcoder/MAXIMUM_SUM_SUBSEQUENCE_LEAST_K_DISTANT_ELEMENTS` (O2)
+- `c_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY` (O0)
+- `c_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING` (O2)
+- `c_transcoder/MINIMAL_OPERATIONS_MAKE_NUMBER_MAGICAL` (O0)
+- `c_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0)
+- `c_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O0)
+- `c_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY` (O0)
+- `c_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0)
+- `c_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `c_transcoder/MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME_WITH_PERMUTATIONS_ALLOWED` (O0)
+- `c_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE` (O0)
+- `c_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O2)
+- `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0)
+- `c_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `c_transcoder/MINIMUM_PRODUCT_SUBSET_ARRAY` (O0)
+- `c_transcoder/MINIMUM_ROTATIONS_UNLOCK_CIRCULAR_LOCK` (O0)
+- `c_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION` (O2)
+- `c_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O0, O2)
+- `c_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS` (O0)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `c_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE` (O0)
+- `c_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION` (O2)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0)
+- `c_transcoder/NEWMAN_CONWAY_SEQUENCE_1` (O2)
+- `c_transcoder/NON_REPEATING_ELEMENT` (O0)
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0)
+- `c_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1` (O0)
+- `c_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `c_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0)
+- `c_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `c_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS` (O2)
+- `c_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS` (O2)
+- `c_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH` (O2)
+- `c_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `c_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0)
+- `c_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0)
+- `c_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0)
+- `c_transcoder/NUMBER_SUBSEQUENCES_FORM_AI_BJ_CK` (O0)
+- `c_transcoder/NUMBER_SUBSTRINGS_STRING` (O0)
+- `c_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N` (O2)
+- `c_transcoder/PADOVAN_SEQUENCE` (O0)
+- `c_transcoder/PAINTING_FENCE_ALGORITHM` (O0)
+- `c_transcoder/PERFECT_REVERSIBLE_STRING` (O0)
+- `c_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `c_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `c_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `c_transcoder/PRIMALITY_TEST_SET_5USING_LUCAS_LEHMER_SERIES` (O0)
+- `c_transcoder/PRIME_NUMBERS` (O0)
+- `c_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0)
+- `c_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE_1` (O0)
+- `c_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0)
+- `c_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE` (O0)
+- `c_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `c_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `c_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM_1` (O0)
+- `c_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `c_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O0)
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0)
+- `c_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O2)
+- `c_transcoder/REMOVE_MINIMUM_ELEMENTS_EITHER_SIDE_2MIN_MAX` (O0)
+- `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0)
+- `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0)
+- `c_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1` (O2)
+- `c_transcoder/SIZE_SUBARRAY_MAXIMUM_SUM` (O0)
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM` (O2)
+- `c_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1` (O2)
+- `c_transcoder/SUBSEQUENCES_SIZE_THREE_ARRAY_WHOSE_SUM_DIVISIBLE_M` (O0)
+- `c_transcoder/SUM_BINOMIAL_COEFFICIENTS` (O2)
+- `c_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `c_transcoder/SUM_FACTORS_NUMBER` (O0)
+- `c_transcoder/SUM_FIBONACCI_NUMBERS` (O2)
+- `c_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N` (O2)
+- `c_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS` (O2)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `c_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `c_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0)
+- `c_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE` (O0)
+- `c_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0)
+- `c_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `c_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `c_transcoder/SUM_SERIES_ALTERNATE_SIGNED_SQUARES_AP` (O0)
+- `c_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS` (O2)
+- `c_transcoder/TILING_WITH_DOMINOES` (O1, O2)
+- `c_transcoder/UGLY_NUMBERS` (O2)
+- `c_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED` (O2)
+- `c_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0)
+- `c_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS` (O2)
+- `c_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O2)
+- `c_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+- `cpp_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0)
+- `cpp_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0)
+- `cpp_transcoder/BELL_NUMBERS_NUMBER_OF_WAYS_TO_PARTITION_A_SET` (O2)
+- `cpp_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `cpp_transcoder/BREAKING_NUMBER_FIRST_PART_INTEGRAL_DIVISION_SECOND_POWER_10` (O1, O2)
+- `cpp_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `cpp_transcoder/CHECK_DIVISIBILITY_BINARY_STRING_2K` (O0)
+- `cpp_transcoder/CHECK_GIVEN_SENTENCE_GIVEN_SET_SIMPLE_GRAMMER_RULES` (O0)
+- `cpp_transcoder/CHECK_GIVEN_STRING_CAN_SPLIT_FOUR_DISTINCT_STRINGS` (O1, O2)
+- `cpp_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `cpp_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O0)
+- `cpp_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `cpp_transcoder/CHECK_STRING_CAN_OBTAINED_ROTATING_ANOTHER_STRING_2_PLACES` (O1, O2)
+- `cpp_transcoder/COIN_GAME_WINNER_EVERY_PLAYER_THREE_CHOICES` (O2)
+- `cpp_transcoder/COMPUTE_NCR_P_SET_1_INTRODUCTION_AND_DYNAMIC_PROGRAMMING_SOLUTION` (O2)
+- `cpp_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `cpp_transcoder/COUNTING_PAIRS_PERSON_CAN_FORM_PAIR_ONE_1` (O2)
+- `cpp_transcoder/COUNTS_PATHS_POINT_REACH_ORIGIN_1` (O2)
+- `cpp_transcoder/COUNT_DERANGEMENTS_PERMUTATION_SUCH_THAT_NO_ELEMENT_APPEARS_IN_ITS_ORIGINAL_POSITION_1` (O2)
+- `cpp_transcoder/COUNT_DISTINCT_NON_NEGATIVE_PAIRS_X_Y_SATISFY_INEQUALITY_XX_YY_N_2` (O0)
+- `cpp_transcoder/COUNT_DISTINCT_OCCURRENCES_AS_A_SUBSEQUENCE` (O2)
+- `cpp_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `cpp_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0)
+- `cpp_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0)
+- `cpp_transcoder/COUNT_NATURAL_NUMBERS_WHOSE_PERMUTATION_GREATER_NUMBER` (O0)
+- `cpp_transcoder/COUNT_NUMBER_BINARY_STRINGS_WITHOUT_CONSECUTIVE_1S` (O2)
+- `cpp_transcoder/COUNT_NUMBER_OF_OCCURRENCES_OR_FREQUENCY_IN_A_SORTED_ARRAY` (O0)
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_COVER_A_DISTANCE_1` (O0)
+- `cpp_transcoder/COUNT_NUMBER_OF_WAYS_TO_FILL_A_N_X_4_GRID_USING_1_X_4_TILES` (O2)
+- `cpp_transcoder/COUNT_NUMBER_WAYS_REACH_GIVEN_SCORE_GAME` (O2)
+- `cpp_transcoder/COUNT_NUMBER_WAYS_TILE_FLOOR_SIZE_N_X_M_USING_1_X_M_SIZE_TILES` (O2)
+- `cpp_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0)
+- `cpp_transcoder/COUNT_OFDIFFERENT_WAYS_EXPRESS_N_SUM_1_3_4` (O2)
+- `cpp_transcoder/COUNT_OF_PAIRS_SATISFYING_THE_GIVEN_CONDITION` (O2)
+- `cpp_transcoder/COUNT_OF_SUB_STRINGS_THAT_DO_NOT_CONTAIN_ALL_THE_CHARACTERS_FROM_THE_SET_A_B_C_AT_THE_SAME_TIME` (O0)
+- `cpp_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `cpp_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `cpp_transcoder/COUNT_PALINDROMIC_SUBSEQUENCE_GIVEN_STRING` (O2)
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_1` (O2)
+- `cpp_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `cpp_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `cpp_transcoder/COUNT_STRINGS_ADJACENT_CHARACTERS_DIFFERENCE_ONE` (O2)
+- `cpp_transcoder/COUNT_SUBARRAYS_WITH_SAME_EVEN_AND_ODD_ELEMENTS` (O2)
+- `cpp_transcoder/COUNT_TOTAL_SET_BITS_IN_ALL_NUMBERS_FROM_1_TO_N` (O0)
+- `cpp_transcoder/C_PROGRAM_FACTORIAL_NUMBER_1` (O0)
+- `cpp_transcoder/DELANNOY_NUMBER_1` (O2)
+- `cpp_transcoder/DICE_THROW_PROBLEM` (O2)
+- `cpp_transcoder/DIFFERENT_WAYS_SUM_N_USING_NUMBERS_GREATER_EQUAL_M` (O2)
+- `cpp_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `cpp_transcoder/DIVIDE_LARGE_NUMBER_REPRESENTED_STRING` (O2)
+- `cpp_transcoder/DOUBLE_FACTORIAL_1` (O0)
+- `cpp_transcoder/DYCK_PATH` (O0)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_11_EGG_DROPPING_PUZZLE_1` (O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_13_CUTTING_A_ROD` (O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_15_LONGEST_BITONIC_SUBSEQUENCE` (O2)
+- `cpp_transcoder/DYNAMIC_PROGRAMMING_SET_28_MINIMUM_INSERTIONS_TO_FORM_A_PALINDROME` (O0)
+- `cpp_transcoder/EFFICIENT_SEARCH_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_IS_1` (O0)
+- `cpp_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY` (O0)
+- `cpp_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0)
+- `cpp_transcoder/EULERIAN_NUMBER_1` (O2)
+- `cpp_transcoder/FIND_A_ROTATION_WITH_MAXIMUM_HAMMING_DISTANCE` (O2)
+- `cpp_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1` (O2)
+- `cpp_transcoder/FIND_EQUAL_POINT_STRING_BRACKETS` (O2)
+- `cpp_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `cpp_transcoder/FIND_LAST_DIGIT_FACTORIAL_DIVIDES_FACTORIAL_B` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `cpp_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O0)
+- `cpp_transcoder/FIND_MINIMUM_NUMBER_OF_COINS_THAT_MAKE_A_CHANGE_1` (O2)
+- `cpp_transcoder/FIND_MINIMUM_SUM_FACTORS_NUMBER` (O0)
+- `cpp_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `cpp_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `cpp_transcoder/FIND_N_TH_ELEMENT_FROM_STERNS_DIATOMIC_SERIES` (O1, O2)
+- `cpp_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0)
+- `cpp_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `cpp_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0)
+- `cpp_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM` (O0)
+- `cpp_transcoder/FIND_SUM_EVEN_INDEX_BINOMIAL_COEFFICIENTS` (O2)
+- `cpp_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `cpp_transcoder/FIND_THE_ELEMENT_BEFORE_WHICH_ALL_THE_ELEMENTS_ARE_SMALLER_THAN_IT_AND_AFTER_WHICH_ALL_ARE_GREATER_THAN_IT` (O2)
+- `cpp_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `cpp_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0)
+- `cpp_transcoder/FIND_THE_MISSING_NUMBER_1` (O0)
+- `cpp_transcoder/FIND_THE_MISSING_NUMBER_2` (O0)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `cpp_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `cpp_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `cpp_transcoder/FIND_WHETHER_AN_ARRAY_IS_SUBSET_OF_ANOTHER_ARRAY_SET_1` (O0)
+- `cpp_transcoder/FLOOR_IN_A_SORTED_ARRAY` (O0)
+- `cpp_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM` (O2)
+- `cpp_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `cpp_transcoder/GIVEN_LARGE_NUMBER_CHECK_SUBSEQUENCE_DIGITS_DIVISIBLE_8_1` (O2)
+- `cpp_transcoder/GIVEN_TWO_STRINGS_FIND_FIRST_STRING_SUBSEQUENCE_SECOND_1` (O0)
+- `cpp_transcoder/HIGHWAY_BILLBOARD_PROBLEM` (O2)
+- `cpp_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0)
+- `cpp_transcoder/HOW_TO_PRINT_MAXIMUM_NUMBER_OF_A_USING_GIVEN_FOUR_KEYS` (O2)
+- `cpp_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O0)
+- `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0)
+- `cpp_transcoder/LARGEST_SUBSEQUENCE_GCD_GREATER_1` (O0)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE` (O2)
+- `cpp_transcoder/LENGTH_LONGEST_BALANCED_SUBSEQUENCE_1` (O0)
+- `cpp_transcoder/LENGTH_LONGEST_SUB_STRING_CAN_MAKE_REMOVED` (O1, O2)
+- `cpp_transcoder/LEONARDO_NUMBER_1` (O2)
+- `cpp_transcoder/LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION` (O2)
+- `cpp_transcoder/LEXICOGRAPHICAL_CONCATENATION_SUBSTRINGS_STRING` (O2)
+- `cpp_transcoder/LONGEST_COMMON_INCREASING_SUBSEQUENCE_LCS_LIS` (O2)
+- `cpp_transcoder/LONGEST_INCREASING_ODD_EVEN_SUBSEQUENCE` (O2)
+- `cpp_transcoder/LONGEST_PALINDROME_SUBSEQUENCE_SPACE` (O2)
+- `cpp_transcoder/LONGEST_PREFIX_ALSO_SUFFIX_1` (O2)
+- `cpp_transcoder/LONGEST_SUBSEQUENCE_SUCH_THAT_DIFFERENCE_BETWEEN_ADJACENTS_IS_ONE` (O2)
+- `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `cpp_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `cpp_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `cpp_transcoder/MAXIMUM_BINOMIAL_COEFFICIENT_TERM_VALUE` (O2)
+- `cpp_transcoder/MAXIMUM_EQULIBRIUM_SUM_ARRAY` (O0)
+- `cpp_transcoder/MAXIMUM_LENGTH_SUBSEQUENCE_DIFFERENCE_ADJACENT_ELEMENTS_EITHER_0_1` (O2)
+- `cpp_transcoder/MAXIMUM_NUMBER_SEGMENTS_LENGTHS_B_C` (O2)
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_K_TIMES` (O2)
+- `cpp_transcoder/MAXIMUM_PROFIT_BY_BUYING_AND_SELLING_A_SHARE_AT_MOST_TWICE` (O2)
+- `cpp_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `cpp_transcoder/MAXIMUM_SUM_ALTERNATING_SUBSEQUENCE_SUM` (O2)
+- `cpp_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY` (O0)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O2)
+- `cpp_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY` (O0)
+- `cpp_transcoder/MAXIMUM_TRIPLET_SUM_ARRAY_1` (O0)
+- `cpp_transcoder/MAXIMUM_VALUE_CHOICE_EITHER_DIVIDING_CONSIDERING` (O2)
+- `cpp_transcoder/MINIMIZE_THE_MAXIMUM_DIFFERENCE_BETWEEN_THE_HEIGHTS` (O0)
+- `cpp_transcoder/MINIMUM_COST_MAKE_ARRAY_SIZE_1_REMOVING_LARGER_PAIRS` (O0)
+- `cpp_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `cpp_transcoder/MINIMUM_INCREMENT_K_OPERATIONS_MAKE_ELEMENTS_EQUAL` (O0)
+- `cpp_transcoder/MINIMUM_INSERTIONS_SORT_ARRAY` (O2)
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_1` (O2)
+- `cpp_transcoder/MINIMUM_NUMBER_OF_JUMPS_TO_REACH_END_OF_A_GIVEN_ARRAY_2` (O2)
+- `cpp_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O2)
+- `cpp_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0)
+- `cpp_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `cpp_transcoder/MINIMUM_ROTATIONS_REQUIRED_GET_STRING` (O1, O2)
+- `cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION` (O2)
+- `cpp_transcoder/MINIMUM_STEPS_TO_DELETE_A_STRING_AFTER_REPEATED_DELETION_OF_PALINDROME_SUBSTRINGS` (O2)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `cpp_transcoder/MINIMUM_TIME_WRITE_CHARACTERS_USING_INSERT_DELETE_COPY_OPERATION` (O2)
+- `cpp_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0)
+- `cpp_transcoder/MIN_FLIPS_OF_CONTINUOUS_CHARACTERS_TO_MAKE_ALL_CHARACTERS_SAME_IN_A_STRING` (O0)
+- `cpp_transcoder/MODULUS_TWO_FLOAT_DOUBLE_NUMBERS` (O0)
+- `cpp_transcoder/NEWMAN_CONWAY_SEQUENCE_1` (O2)
+- `cpp_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0)
+- `cpp_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `cpp_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0)
+- `cpp_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `cpp_transcoder/NUMBER_N_DIGITS_NON_DECREASING_INTEGERS` (O2)
+- `cpp_transcoder/NUMBER_N_DIGIT_STEPPING_NUMBERS` (O2)
+- `cpp_transcoder/NUMBER_OF_BINARY_TREES_FOR_GIVEN_PREORDER_SEQUENCE_LENGTH` (O2)
+- `cpp_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `cpp_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0)
+- `cpp_transcoder/NUMBER_SUBSEQUENCES_STRING_DIVISIBLE_N` (O2)
+- `cpp_transcoder/NUMBER_SUBSTRINGS_DIVISIBLE_4_STRING_INTEGERS` (O0)
+- `cpp_transcoder/NUMBER_WHICH_HAS_THE_MAXIMUM_NUMBER_OF_DISTINCT_PRIME_FACTORS_IN_RANGE_M_TO_N` (O2)
+- `cpp_transcoder/PADOVAN_SEQUENCE` (O0)
+- `cpp_transcoder/PAPER_CUT_MINIMUM_NUMBER_SQUARES` (O0)
+- `cpp_transcoder/PARTITION_INTO_TWO_SUBARRAYS_OF_LENGTHS_K_AND_N_K_SUCH_THAT_THE_DIFFERENCE_OF_SUMS_IS_MAXIMUM` (O0)
+- `cpp_transcoder/PERMUTE_TWO_ARRAYS_SUM_EVERY_PAIR_GREATER_EQUAL_K` (O0)
+- `cpp_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `cpp_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `cpp_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `cpp_transcoder/PRIME_NUMBERS` (O0)
+- `cpp_transcoder/PROGRAM_FIND_STRING_START_END_GEEKS` (O1, O2)
+- `cpp_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `cpp_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `cpp_transcoder/REARRANGE_ARRAY_MAXIMUM_MINIMUM_FORM_SET_2_O1_EXTRA_SPACE` (O0)
+- `cpp_transcoder/REARRANGE_ARRAY_MAXIMUM_MINIMUM_FORM_SET_2_O1_EXTRA_SPACE_1` (O0)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0)
+- `cpp_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM_1` (O1, O2)
+- `cpp_transcoder/REMOVE_MINIMUM_ELEMENTS_EITHER_SIDE_2MIN_MAX` (O0)
+- `cpp_transcoder/REPLACE_CHARACTER_C1_C2_C2_C1_STRING_S` (O2)
+- `cpp_transcoder/SCHEDULE_ELEVATOR_TO_REDUCE_THE_TOTAL_TIME_TAKEN` (O0)
+- `cpp_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0)
+- `cpp_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0)
+- `cpp_transcoder/SEARCH_INSERT_AND_DELETE_IN_AN_UNSORTED_ARRAY` (O0)
+- `cpp_transcoder/SEQUENCES_GIVEN_LENGTH_EVERY_ELEMENT_EQUAL_TWICE_PREVIOUS_1` (O2)
+- `cpp_transcoder/SIZE_SUBARRAY_MAXIMUM_SUM` (O0)
+- `cpp_transcoder/SMALLEST_SUBSET_SUM_GREATER_ELEMENTS` (O0)
+- `cpp_transcoder/SORT_ARRAY_CONTAIN_1_N_VALUES` (O0)
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM` (O2)
+- `cpp_transcoder/SPACE_OPTIMIZED_DP_SOLUTION_0_1_KNAPSACK_PROBLEM_1` (O2)
+- `cpp_transcoder/SPACE_OPTIMIZED_SOLUTION_LCS` (O2)
+- `cpp_transcoder/SUM_BINOMIAL_COEFFICIENTS` (O2)
+- `cpp_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `cpp_transcoder/SUM_FIBONACCI_NUMBERS` (O2)
+- `cpp_transcoder/SUM_LARGEST_PRIME_FACTOR_NUMBER_LESS_EQUAL_N` (O2)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS` (O2)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `cpp_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN_1` (O0)
+- `cpp_transcoder/SUM_OF_ALL_ELEMENTS_UP_TO_NTH_ROW_IN_A_PASCALS_TRIANGLE` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `cpp_transcoder/SUM_PAIRWISE_PRODUCTS_2` (O0)
+- `cpp_transcoder/SUM_SERIES_12_32_52_2N_12` (O0)
+- `cpp_transcoder/SUM_SQUARES_BINOMIAL_COEFFICIENTS` (O2)
+- `cpp_transcoder/TOTAL_NUMBER_OF_NON_DECREASING_NUMBERS_WITH_N_DIGITS_1` (O0)
+- `cpp_transcoder/UNBOUNDED_KNAPSACK_REPETITION_ITEMS_ALLOWED` (O2)
+- `cpp_transcoder/WAYS_TO_WRITE_N_AS_SUM_OF_TWO_OR_MORE_POSITIVE_INTEGERS` (O2)
+- `cpp_transcoder/WAYS_TRANSFORMING_ONE_STRING_REMOVING_0_CHARACTERS` (O2)
+- `cpp_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+- `go_transcoder/ANALYSIS_OF_ALGORITHMS_SET_2_ASYMPTOTIC_ANALYSIS` (O0)
+- `go_transcoder/ARRAY_ELEMENT_MOVED_K_USING_SINGLE_MOVES` (O0)
+- `go_transcoder/BIN_PACKING_PROBLEM_MINIMIZE_NUMBER_OF_USED_BINS` (O0)
+- `go_transcoder/CHECK_ARRAY_REPRESENTS_INORDER_BINARY_SEARCH_TREE_NOT` (O0)
+- `go_transcoder/CHECK_GIVEN_STRING_ROTATION_PALINDROME` (O0)
+- `go_transcoder/CHECK_IF_ALL_THE_ELEMENTS_CAN_BE_MADE_OF_SAME_PARITY_BY_INVERTING_ADJACENT_ELEMENTS` (O0)
+- `go_transcoder/CHECK_IF_A_NUMBER_IS_JUMBLED_OR_NOT` (O0)
+- `go_transcoder/CHECK_IF_X_CAN_GIVE_CHANGE_TO_EVERY_PERSON_IN_THE_QUEUE` (O0)
+- `go_transcoder/CHECK_STRING_FOLLOWS_ANBN_PATTERN_NOT` (O0)
+- `go_transcoder/CIRCLE_LATTICE_POINTS` (O0)
+- `go_transcoder/COMPUTE_N_UNDER_MODULO_P` (O0)
+- `go_transcoder/COUNT_DIGITS_FACTORIAL_SET_1` (O0)
+- `go_transcoder/COUNT_EVEN_LENGTH_BINARY_SEQUENCES_WITH_SAME_SUM_OF_FIRST_AND_SECOND_HALF_BITS_1` (O0)
+- `go_transcoder/COUNT_INDEX_PAIRS_EQUAL_ELEMENTS_ARRAY` (O0)
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY` (O0)
+- `go_transcoder/COUNT_INVERSIONS_OF_SIZE_THREE_IN_A_GIVE_ARRAY_1` (O0)
+- `go_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O0)
+- `go_transcoder/COUNT_OBTUSE_ANGLES_CIRCLE_K_EQUIDISTANT_POINTS_2_GIVEN_POINTS` (O0)
+- `go_transcoder/COUNT_PAIRS_DIFFERENCE_EQUAL_K` (O0)
+- `go_transcoder/COUNT_PAIRS_TWO_SORTED_ARRAYS_WHOSE_SUM_EQUAL_GIVEN_VALUE_X` (O0)
+- `go_transcoder/COUNT_PAIRS_WHOSE_PRODUCTS_EXIST_IN_ARRAY` (O0)
+- `go_transcoder/COUNT_POSSIBLE_PATHS_TOP_LEFT_BOTTOM_RIGHT_NXM_MATRIX_3` (O0)
+- `go_transcoder/COUNT_POSSIBLE_WAYS_TO_CONSTRUCT_BUILDINGS` (O0)
+- `go_transcoder/COUNT_SUBSTRINGS_WITH_SAME_FIRST_AND_LAST_CHARACTERS` (O0)
+- `go_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O0)
+- `go_transcoder/DISTRIBUTING_ITEMS_PERSON_CANNOT_TAKE_TWO_ITEMS_TYPE` (O0)
+- `go_transcoder/DYCK_PATH` (O0)
+- `go_transcoder/DYNAMIC_PROGRAMMING_HIGH_EFFORT_VS_LOW_EFFORT_TASKS_PROBLEM` (O0)
+- `go_transcoder/EFFICIENTLY_FIND_FIRST_REPEATED_CHARACTER_STRING_WITHOUT_USING_ADDITIONAL_DATA_STRUCTURE_ONE_TRAVERSAL` (O0)
+- `go_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY` (O0)
+- `go_transcoder/EQUILIBRIUM_INDEX_OF_AN_ARRAY_1` (O0)
+- `go_transcoder/FIND_INDEX_OF_AN_EXTRA_ELEMENT_PRESENT_IN_ONE_SORTED_ARRAY` (O0)
+- `go_transcoder/FIND_MAXIMUM_AVERAGE_SUBARRAY_OF_K_LENGTH_1` (O0)
+- `go_transcoder/FIND_MAXIMUM_HEIGHT_PYRAMID_FROM_THE_GIVEN_ARRAY_OF_OBJECTS` (O0)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR` (O0)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O0, O1, O2)
+- `go_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O0)
+- `go_transcoder/FIND_NUMBER_PERFECT_SQUARES_TWO_GIVEN_NUMBERS` (O0)
+- `go_transcoder/FIND_ONE_EXTRA_CHARACTER_STRING_1` (O0)
+- `go_transcoder/FIND_PAIR_WITH_GREATEST_PRODUCT_IN_ARRAY` (O0)
+- `go_transcoder/FIND_REPETITIVE_ELEMENT_1_N_1_2` (O0)
+- `go_transcoder/FIND_ROTATION_COUNT_ROTATED_SORTED_ARRAY` (O0)
+- `go_transcoder/FIND_SMALLEST_VALUE_REPRESENTED_SUM_SUBSET_GIVEN_ARRAY` (O0)
+- `go_transcoder/FIND_SUM_MODULO_K_FIRST_N_NATURAL_NUMBER` (O0)
+- `go_transcoder/FIND_THE_ELEMENT_THAT_APPEARS_ONCE` (O0)
+- `go_transcoder/FIND_THE_LARGEST_SUBARRAY_WITH_0_SUM` (O0)
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS` (O0)
+- `go_transcoder/FIND_THE_MINIMUM_DISTANCE_BETWEEN_TWO_NUMBERS_1` (O0)
+- `go_transcoder/FIND_THE_MISSING_NUMBER_2` (O0)
+- `go_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES` (O0)
+- `go_transcoder/FIND_THE_NUMBER_OCCURRING_ODD_NUMBER_OF_TIMES_2` (O0)
+- `go_transcoder/FIND_UNIT_DIGIT_X_RAISED_POWER_Y` (O0)
+- `go_transcoder/FREQUENT_ELEMENT_ARRAY` (O0)
+- `go_transcoder/FRIENDS_PAIRING_PROBLEM_2` (O0)
+- `go_transcoder/HEXAGONAL_NUMBER` (O0)
+- `go_transcoder/HORNERS_METHOD_POLYNOMIAL_EVALUATION` (O0)
+- `go_transcoder/HOW_TO_BEGIN_WITH_COMPETITIVE_PROGRAMMING` (O0)
+- `go_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1` (O0)
+- `go_transcoder/HOW_TO_COMPUTE_MOD_OF_A_BIG_NUMBER` (O0)
+- `go_transcoder/INTEGER_POSITIVE_VALUE_POSITIVE_NEGATIVE_VALUE_ARRAY_1` (O0)
+- `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1)
+- `go_transcoder/LARGEST_SUM_CONTIGUOUS_SUBARRAY_2` (O0)
+- `go_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O0)
+- `go_transcoder/MAXIMIZE_SUM_ARRII` (O0)
+- `go_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O0)
+- `go_transcoder/MAXIMIZE_VOLUME_CUBOID_GIVEN_SUM_SIDES` (O0)
+- `go_transcoder/MAXIMUM_HEIGHT_OF_TRIANGULAR_ARRANGEMENT_OF_ARRAY_VALUES` (O0)
+- `go_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O0)
+- `go_transcoder/MAXIMUM_SUM_IARRI_AMONG_ROTATIONS_GIVEN_ARRAY_1` (O0)
+- `go_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O0)
+- `go_transcoder/MINIMUM_CHARACTERS_ADDED_FRONT_MAKE_STRING_PALINDROME` (O0)
+- `go_transcoder/MINIMUM_COST_CONNECT_WEIGHTED_NODES_REPRESENTED_ARRAY` (O0)
+- `go_transcoder/MINIMUM_COST_FOR_ACQUIRING_ALL_COINS_WITH_K_EXTRA_COINS_ALLOWED_WITH_EVERY_COIN` (O0)
+- `go_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O0)
+- `go_transcoder/MINIMUM_LENGTH_SUBARRAY_SUM_GREATER_GIVEN_VALUE` (O0)
+- `go_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O2)
+- `go_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O0)
+- `go_transcoder/MINIMUM_OPERATIONS_MAKE_GCD_ARRAY_MULTIPLE_K` (O0)
+- `go_transcoder/MINIMUM_ROTATIONS_UNLOCK_CIRCULAR_LOCK` (O0)
+- `go_transcoder/MINIMUM_SUM_PRODUCT_TWO_ARRAYS` (O0)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O0)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O0)
+- `go_transcoder/MINIMUM_TIME_TO_FINISH_TASKS_WITHOUT_SKIPPING_TWO_CONSECUTIVE` (O0)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR` (O0)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O0)
+- `go_transcoder/NON_REPEATING_ELEMENT` (O0)
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS` (O0)
+- `go_transcoder/NUMBER_DIGITS_PRODUCT_TWO_NUMBERS_1` (O0)
+- `go_transcoder/NUMBER_INDEXES_EQUAL_ELEMENTS_GIVEN_RANGE` (O0)
+- `go_transcoder/NUMBER_JUMP_REQUIRED_GIVEN_LENGTH_REACH_POINT_FORM_D_0_ORIGIN_2D_PLANE` (O0)
+- `go_transcoder/NUMBER_NON_NEGATIVE_INTEGRAL_SOLUTIONS_B_C_N` (O0)
+- `go_transcoder/NUMBER_OF_PAIRS_IN_AN_ARRAY_HAVING_SUM_EQUAL_TO_PRODUCT` (O0)
+- `go_transcoder/NUMBER_OF_TRIANGLES_IN_A_PLANE_IF_NO_MORE_THAN_TWO_POINTS_ARE_COLLINEAR` (O0)
+- `go_transcoder/NUMBER_ORDERED_PAIRS_AI_AJ_0` (O0)
+- `go_transcoder/NUMBER_SUBSEQUENCES_AB_STRING_REPEATED_K_TIMES` (O0)
+- `go_transcoder/NUMBER_SUBSTRINGS_STRING` (O0)
+- `go_transcoder/PADOVAN_SEQUENCE` (O0)
+- `go_transcoder/PAINTING_FENCE_ALGORITHM` (O0)
+- `go_transcoder/PERFECT_REVERSIBLE_STRING` (O0)
+- `go_transcoder/PIZZA_CUT_PROBLEM_CIRCLE_DIVISION_LINES` (O0)
+- `go_transcoder/POSITION_ELEMENT_STABLE_SORT` (O0)
+- `go_transcoder/PRIMALITY_TEST_SET_1_INTRODUCTION_AND_SCHOOL_METHOD` (O0)
+- `go_transcoder/PRIME_NUMBERS` (O0)
+- `go_transcoder/PRODUCT_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0)
+- `go_transcoder/PROGRAM_CHECK_ARRAY_SORTED_NOT_ITERATIVE_RECURSIVE_1` (O0)
+- `go_transcoder/PROGRAM_FIND_REMAINDER_LARGE_NUMBER_DIVIDED_11` (O0)
+- `go_transcoder/PROGRAM_FIND_SMALLEST_DIFFERENCE_ANGLES_TWO_PARTS_GIVEN_CIRCLE` (O0)
+- `go_transcoder/PROGRAM_FOR_FACTORIAL_OF_A_NUMBER_1` (O0)
+- `go_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM` (O0)
+- `go_transcoder/PROGRAM_PRINT_SUM_GIVEN_NTH_TERM_1` (O0)
+- `go_transcoder/QUERIES_COUNTS_ARRAY_ELEMENTS_VALUES_GIVEN_RANGE` (O0)
+- `go_transcoder/QUICK_WAY_CHECK_CHARACTERS_STRING` (O0)
+- `go_transcoder/RECURSIVELY_BREAK_NUMBER_3_PARTS_GET_MAXIMUM_SUM` (O0)
+- `go_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0)
+- `go_transcoder/SUBSEQUENCES_SIZE_THREE_ARRAY_WHOSE_SUM_DIVISIBLE_M` (O0)
+- `go_transcoder/SUM_DIVISORS_1_N_1` (O0)
+- `go_transcoder/SUM_FACTORS_NUMBER` (O0)
+- `go_transcoder/SUM_MANHATTAN_DISTANCES_PAIRS_POINTS` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ABSOLUTE_DIFFERENCE_ROW_COLUMN_NUMBERS_1` (O0)
+- `go_transcoder/SUM_MATRIX_ELEMENT_ELEMENT_INTEGER_DIVISION_ROW_COLUMN` (O0)
+- `go_transcoder/SUM_NODES_K_TH_LEVEL_TREE_REPRESENTED_STRING` (O0)
+- `go_transcoder/SUM_OF_ALL_PROPER_DIVISORS_OF_A_NATURAL_NUMBER` (O0)
+- `go_transcoder/SUM_PAIRWISE_PRODUCTS` (O0)
+- `go_transcoder/SUM_PAIRWISE_PRODUCTS_1` (O0)
+- `go_transcoder/WAYS_REMOVE_ONE_ELEMENT_BINARY_STRING_XOR_BECOMES_ZERO` (O0)
+- `go_transcoder/WRITE_YOU_OWN_POWER_WITHOUT_USING_MULTIPLICATION_AND_DIVISION` (O0)
+
+</details>
+
+<details><summary>slice sort runtime: 58 benchmarks in at least one optimization level</summary>
+
+- O0: 0
+- O1: 58
+- O2: 48
+
+- `c_transcoder/CHECK_REVERSING_SUB_ARRAY_MAKE_ARRAY_SORTED` (O1)
+- `c_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O1, O2)
+- `c_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O1, O2)
+- `c_transcoder/DIFFERENCE_MAXIMUM_SUM_MINIMUM_SUM_N_M_ELEMENTSIN_REVIEW` (O1)
+- `c_transcoder/FIND_MAXIMUM_PRODUCT_OF_A_TRIPLET_IN_ARRAY_1` (O1, O2)
+- `c_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O1, O2)
+- `c_transcoder/FIND_MINIMUM_RADIUS_ATLEAST_K_POINT_LIE_INSIDE_CIRCLE` (O1)
+- `c_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O1, O2)
+- `c_transcoder/FREQUENT_ELEMENT_ARRAY` (O1, O2)
+- `c_transcoder/K_NUMBERS_DIFFERENCE_MAXIMUM_MINIMUM_K_NUMBER_MINIMIZED` (O1, O2)
+- `c_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O1, O2)
+- `c_transcoder/MAXIMIZE_SUM_ARRII` (O1, O2)
+- `c_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O1, O2)
+- `c_transcoder/MAXIMUM_POSSIBLE_DIFFERENCE_TWO_SUBSETS_ARRAY_1` (O1, O2)
+- `c_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O1, O2)
+- `c_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O1, O2)
+- `c_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O1, O2)
+- `c_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O1)
+- `c_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O1, O2)
+- `c_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O1, O2)
+- `c_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O1, O2)
+- `c_transcoder/POSSIBLE_FORM_TRIANGLE_ARRAY_VALUES` (O1, O2)
+- `c_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND` (O1, O2)
+- `cpp_transcoder/ELEMENTS_TO_BE_ADDED_SO_THAT_ALL_ELEMENTS_OF_A_RANGE_ARE_PRESENT_IN_ARRAY` (O1, O2)
+- `cpp_transcoder/FIND_A_TRIPLET_THAT_SUM_TO_A_GIVEN_VALUE_1` (O1)
+- `cpp_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O1, O2)
+- `cpp_transcoder/FREQUENT_ELEMENT_ARRAY` (O1, O2)
+- `cpp_transcoder/LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION` (O1, O2)
+- `cpp_transcoder/LEXICOGRAPHICAL_CONCATENATION_SUBSTRINGS_STRING` (O1, O2)
+- `cpp_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O1, O2)
+- `cpp_transcoder/MAXIMUM_REMOVAL_FROM_ARRAY_WHEN_REMOVAL_TIME_WAITING_TIME` (O1, O2)
+- `cpp_transcoder/MAXIMUM_SUM_ABSOLUTE_DIFFERENCE_ARRAY` (O1)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE` (O1)
+- `cpp_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O1, O2)
+- `cpp_transcoder/MINIMIZE_THE_MAXIMUM_DIFFERENCE_BETWEEN_THE_HEIGHTS` (O1, O2)
+- `cpp_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O1)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY` (O1, O2)
+- `cpp_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O1, O2)
+- `cpp_transcoder/PARTITION_INTO_TWO_SUBARRAYS_OF_LENGTHS_K_AND_N_K_SUCH_THAT_THE_DIFFERENCE_OF_SUMS_IS_MAXIMUM` (O1, O2)
+- `cpp_transcoder/PERMUTE_TWO_ARRAYS_SUM_EVERY_PAIR_GREATER_EQUAL_K` (O1, O2)
+- `cpp_transcoder/SCHEDULE_ELEVATOR_TO_REDUCE_THE_TOTAL_TIME_TAKEN` (O1, O2)
+- `cpp_transcoder/SORT_EVEN_PLACED_ELEMENTS_INCREASING_ODD_PLACED_DECREASING_ORDER` (O1)
+- `go_transcoder/COUNT_MINIMUM_NUMBER_SUBSETS_SUBSEQUENCES_CONSECUTIVE_NUMBERS` (O1, O2)
+- `go_transcoder/DIFFERENCE_BETWEEN_HIGHEST_AND_LEAST_FREQUENCIES_IN_AN_ARRAY` (O1, O2)
+- `go_transcoder/FIND_MINIMUM_DIFFERENCE_PAIR_1` (O1, O2)
+- `go_transcoder/FIND_NUMBER_PAIRS_ARRAY_XOR_0` (O1, O2)
+- `go_transcoder/FREQUENT_ELEMENT_ARRAY` (O1, O2)
+- `go_transcoder/MAKING_ELEMENTS_OF_TWO_ARRAYS_SAME_WITH_MINIMUM_INCREMENTDECREMENT` (O1, O2)
+- `go_transcoder/MAXIMIZE_SUM_ARRII` (O1, O2)
+- `go_transcoder/MAXIMIZE_SUM_CONSECUTIVE_DIFFERENCES_CIRCULAR_ARRAY` (O1, O2)
+- `go_transcoder/MAXIMUM_SUM_PAIRS_SPECIFIC_DIFFERENCE_1` (O1, O2)
+- `go_transcoder/MINIMIZE_SUM_PRODUCT_TWO_ARRAYS_PERMUTATIONS_ALLOWED` (O1, O2)
+- `go_transcoder/MINIMUM_DIFFERENCE_MAX_MIN_K_SIZE_SUBSETS` (O1, O2)
+- `go_transcoder/MINIMUM_NUMBER_PLATFORMS_REQUIRED_RAILWAYBUS_STATION` (O1)
+- `go_transcoder/MINIMUM_NUMBER_SUBSETS_DISTINCT_ELEMENTS` (O1, O2)
+- `go_transcoder/MINIMUM_SUM_TWO_NUMBERS_FORMED_DIGITS_ARRAY_2` (O1, O2)
+- `go_transcoder/MINIMUM_XOR_VALUE_PAIR_1` (O1, O2)
+- `go_transcoder/PRODUCT_MAXIMUM_FIRST_ARRAY_MINIMUM_SECOND` (O1, O2)
+
+</details>
+
+<details><summary>std::io::stdio::_print: 9 benchmarks in at least one optimization level</summary>
+
+- O0: 9
+- O1: 9
+- O2: 9
+
+- `c_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `c_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+- `c_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0, O1, O2)
+- `cpp_transcoder/FIND_SUBARRAY_WITH_GIVEN_SUM` (O0, O1, O2)
+- `cpp_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `cpp_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+- `cpp_transcoder/SEARCH_AN_ELEMENT_IN_AN_ARRAY_WHERE_DIFFERENCE_BETWEEN_ADJACENT_ELEMENTS_IS_1` (O0, O1, O2)
+- `go_transcoder/LARGEST_SUBARRAY_WITH_EQUAL_NUMBER_OF_0S_AND_1S` (O0, O1, O2)
+- `go_transcoder/SEARCHING_ARRAY_ADJACENT_DIFFER_K` (O0, O1, O2)
+
+</details>

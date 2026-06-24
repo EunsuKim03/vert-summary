@@ -1,0 +1,34 @@
+fn min(x: i32, y: i32) -> i32 {if x < y { x } else { y } }
+fn max(x: i32, y: i32) -> i32 {if x > y { x } else { y }}
+fn cmpfunc(a: &i32, b: &i32) -> std::cmp::Ordering {a.cmp(b)}
+fn len(arr: &[i32]) -> usize {arr.len()}
+fn sort(arr: &mut [i32]) {arr.sort_by(cmpfunc);}
+
+
+use std::cmp;
+
+fn f_gold(arr: &mut [i32], n: i32, k: i32) -> i32 {
+    if n == 1 {
+        return 0;
+    }
+    arr.sort();
+    let mut ans = arr[n as usize - 1] - arr[0];
+    let mut small = arr[0] + k;
+    let mut big = arr[n as usize - 1] - k;
+    if small > big {
+        std::mem::swap(&mut small, &mut big);
+    }
+    for i in 1..n-1 {
+        let mut subtract = arr[i as usize] - k;
+        let mut add = arr[i as usize] + k;
+        if subtract >= small || add <= big {
+            continue;
+        }
+        if big - subtract <= add - small {
+            small = subtract;
+        } else {
+            big = add;
+        }
+    }
+    cmp::min(ans, big - small)
+}

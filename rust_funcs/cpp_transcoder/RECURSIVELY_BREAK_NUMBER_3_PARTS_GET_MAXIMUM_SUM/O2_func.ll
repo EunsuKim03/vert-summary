@@ -1,0 +1,21 @@
+define noundef i32 @f_gold(i32 noundef %n) unnamed_addr #4 {
+start:
+  %switch = icmp ult i32 %n, 2
+  br i1 %switch, label %common.ret1, label %bb3
+
+common.ret1:                                      ; preds = %start, %bb3
+  %common.ret1.op = phi i32 [ %x.y.i, %bb3 ], [ %n, %start ]
+  ret i32 %common.ret1.op
+
+bb3:                                              ; preds = %start
+  %_7 = sdiv i32 %n, 2
+  %_6 = tail call noundef i32 @f_gold(i32 noundef %_7)
+  %_9 = sdiv i32 %n, 3
+  %_8 = tail call noundef i32 @f_gold(i32 noundef %_9)
+  %_5 = add i32 %_8, %_6
+  %_11 = sdiv i32 %n, 4
+  %_10 = tail call noundef i32 @f_gold(i32 noundef %_11)
+  %_4 = add i32 %_5, %_10
+  %x.y.i = tail call noundef i32 @llvm.smax.i32(i32 %_4, i32 %n)
+  br label %common.ret1
+}

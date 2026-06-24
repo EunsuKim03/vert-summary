@@ -22,6 +22,51 @@ C_WARN_FLAGS = (
     "-Wno-return-type",
 )
 
+MISSING_IDENTIFIER_PATTERNS = (
+    re.compile(r"use of undeclared identifier '([^']+)'"),
+    re.compile(r"unknown type name '([^']+)'"),
+    re.compile(r'unknown type name "([^"]+)"'),
+    re.compile(r"no template named '([^']+)'"),
+    re.compile(r"no matching function for call to '([^']+)'"),
+)
+
+CPP_STANDARD_HEADERS = {
+    "sort": "algorithm",
+    "stable_sort": "algorithm",
+    "max_element": "algorithm",
+    "min_element": "algorithm",
+    "reverse": "algorithm",
+    "find": "algorithm",
+    "lower_bound": "algorithm",
+    "upper_bound": "algorithm",
+    "binary_search": "algorithm",
+    "memset": "cstring",
+    "memcpy": "cstring",
+    "memmove": "cstring",
+    "strlen": "cstring",
+    "strcmp": "cstring",
+    "strcpy": "cstring",
+    "strncpy": "cstring",
+    "INT_MAX": "climits",
+    "INT_MIN": "climits",
+    "CHAR_BIT": "climits",
+    "numeric_limits": "limits",
+    "stack": "stack",
+    "queue": "queue",
+    "priority_queue": "queue",
+    "set": "set",
+    "multiset": "set",
+    "map": "map",
+    "unordered_map": "unordered_map",
+    "unordered_set": "unordered_set",
+    "accumulate": "numeric",
+    "sqrt": "cmath",
+    "pow": "cmath",
+    "ceil": "cmath",
+    "floor": "cmath",
+    "log": "cmath",
+}
+
 FEATURE_ORDER = (
     "integer arithmetic",
     "bitwise/shift",
@@ -169,6 +214,225 @@ def run_emit(suite: str, source: Path, out_path: Path, opt: str) -> tuple[bool, 
     if proc.stderr.strip():
         messages.extend(proc.stderr.strip().splitlines())
     return proc.returncode == 0 and out_path.exists(), messages
+
+
+def ir_has_function_definitions(ir_path: Path) -> bool:
+    if not ir_path.exists():
+        return False
+    return any(line.startswith("define ") for line in ir_path.read_text(errors="replace").splitlines())
+
+
+def has_static_function_definition(source_text: str) -> bool:
+    for line in source_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("static ") and "(" in stripped and ";" not in stripped:
+            return True
+    return False
+
+
+def remove_static_function_markers(source_text: str) -> str:
+    lines: list[str] = []
+    for line in source_text.splitlines():
+        stripped = line.lstrip()
+        indent = line[: len(line) - len(stripped)]
+        if stripped.startswith("static ") and "(" in stripped and ";" not in stripped:
+            stripped = stripped[len("static ") :]
+            if stripped.startswith("inline "):
+                stripped = stripped[len("inline ") :]
+            line = f"{indent}{stripped}"
+        lines.append(line)
+    return "\n".join(lines) + ("\n" if source_text.endswith("\n") else "")
+
+
+def missing_identifiers(messages: Iterable[str]) -> list[str]:
+    identifiers: list[str] = []
+    for message in messages:
+        for pattern in MISSING_IDENTIFIER_PATTERNS:
+            match = pattern.search(message)
+            if match and match.group(1) not in identifiers:
+                identifiers.append(match.group(1))
+    return identifiers
+
+
+def is_processed_source(source: Path) -> bool:
+    return "_processed" in source.stem
+
+
+def raw_source_for_processed(source: Path) -> Path | None:
+    if not is_processed_source(source):
+        return None
+    raw_name = source.name.replace("_processed", "")
+    raw = source.with_name(raw_name)
+    if raw.exists():
+        return raw
+    candidates = sorted(
+        p
+        for p in source.parent.glob(f"*{source.suffix}")
+        if "_processed" not in p.stem
+        and not any(tag in p.name for tag in ("_towasm", "_mutated", "_diff"))
+    )
+    return candidates[0] if candidates else None
+
+
+def collect_raw_includes(raw_text: str) -> list[str]:
+    return [line for line in raw_text.splitlines() if line.lstrip().startswith("#include ")]
+
+
+def collect_macro_definition(raw_text: str, name: str) -> str | None:
+    lines = raw_text.splitlines()
+    for idx, line in enumerate(lines):
+        if not re.match(rf"^\s*#\s*define\s+{re.escape(name)}\b", line):
+            continue
+        collected = [line]
+        while collected[-1].rstrip().endswith("\\") and idx + len(collected) < len(lines):
+            collected.append(lines[idx + len(collected)])
+        return "\n".join(collected)
+    return None
+
+
+
+def collect_typedef_or_global(raw_text: str, name: str) -> str | None:
+    typedef_pattern = re.compile(rf"(?ms)^\s*typedef\b.*?\b{re.escape(name)}\s*;")
+    match = typedef_pattern.search(raw_text)
+    if match:
+        return match.group(0).strip()
+
+    simple_decl = re.compile(
+        rf"(?ms)^\s*(?:static\s+)?(?:const\s+)?[A-Za-z_][\w\s:*<>]*\b{re.escape(name)}\b\s*(?:\[[^\]]*\])?\s*(?:=.*?)?;"
+    )
+    match = simple_decl.search(raw_text)
+    if match:
+        return match.group(0).strip()
+    return None
+
+
+def infer_typedef_from_raw_signature(source_text: str, raw_text: str, name: str) -> str | None:
+    processed_match = re.search(
+        rf"(?m)^\s*(?:static\s+)?{re.escape(name)}\s+([A-Za-z_]\w*)\s*\(",
+        source_text,
+    )
+    if not processed_match:
+        return None
+    function_name = processed_match.group(1)
+    raw_match = re.search(
+        rf"(?m)^\s*(?:static\s+)?([A-Za-z_][\w\s:*]*?)\s+{re.escape(function_name)}\s*\(",
+        raw_text,
+    )
+    if not raw_match:
+        return None
+    raw_type = " ".join(raw_match.group(1).split())
+    if raw_type in {"void", "char", "short", "int", "long", "long long", "float", "double", "bool", "size_t"}:
+        return f"typedef {raw_type} {name};"
+    if raw_type.startswith("unsigned ") or raw_type.startswith("signed "):
+        return f"typedef {raw_type} {name};"
+    return None
+
+
+def extract_raw_definitions(raw_text: str, source_text: str, identifiers: Iterable[str]) -> dict[str, str]:
+    definitions: dict[str, str] = {}
+    for name in identifiers:
+        definition = collect_macro_definition(raw_text, name)
+        if definition is None:
+            definition = collect_typedef_or_global(raw_text, name)
+        if definition is None:
+            definition = infer_typedef_from_raw_signature(source_text, raw_text, name)
+        if definition:
+            definitions[name] = definition
+    return definitions
+
+
+def inferred_standard_headers(suite: str, identifiers: Iterable[str]) -> dict[str, str]:
+    if suite != "cpp_transcoder":
+        return {}
+    headers: dict[str, str] = {}
+    for name in identifiers:
+        header = CPP_STANDARD_HEADERS.get(name)
+        if header:
+            headers[name] = header
+    return headers
+
+
+def write_reprocessed_source(
+    source: Path,
+    raw_source: Path | None,
+    out_dir: Path,
+    definitions: dict[str, str] | None = None,
+    standard_headers: Iterable[str] = (),
+    remove_static_markers: bool = False,
+) -> Path:
+    if source.stem.endswith("_processed"):
+        repaired_name = f"{source.stem[:-len('_processed')]}_reprocessed{source.suffix}"
+    else:
+        repaired_name = f"{source.stem}_reprocessed{source.suffix}"
+    repaired = out_dir / repaired_name
+    raw_text = raw_source.read_text(errors="replace") if raw_source else ""
+    source_text = source.read_text(errors="replace")
+    if remove_static_markers:
+        source_text = remove_static_function_markers(source_text)
+    definitions = definitions or {}
+    includes = collect_raw_includes(raw_text)
+    prelude_lines = [
+        "/* Auto-generated for LLVM emit: selected non-function raw definitions and standard headers needed by processed source. */",
+        *[f"#include <{header}>" for header in sorted(set(standard_headers))],
+        *includes,
+        "",
+    ]
+    for name, definition in definitions.items():
+        prelude_lines.append(f"/* raw non-function definition for {name} */")
+        prelude_lines.append(definition)
+        prelude_lines.append("")
+    repaired.write_text("\n".join(prelude_lines) + "\n" + source_text)
+    return repaired
+
+
+def run_emit_with_raw_repairs(
+    suite: str,
+    source: Path,
+    out_dir: Path,
+    opt: str,
+) -> tuple[bool, list[str], Path, list[str]]:
+    ir_path = out_dir / f"{opt}.ll"
+    ok, messages = run_emit(suite, source, ir_path, opt)
+    source_text = source.read_text(errors="replace") if source.exists() else ""
+    if ok:
+        if ir_has_function_definitions(ir_path) or not has_static_function_definition(source_text):
+            return ok, messages, source, []
+        reprocessed_source = write_reprocessed_source(
+            source,
+            raw_source_for_processed(source),
+            out_dir,
+            remove_static_markers=True,
+        )
+        ok, messages = run_emit(suite, reprocessed_source, ir_path, opt)
+        return ok, messages, reprocessed_source, ["removed static marker from function definitions"]
+
+    raw_source = raw_source_for_processed(source)
+    raw_text = raw_source.read_text(errors="replace") if raw_source else ""
+    repaired_source = source
+    definitions: dict[str, str] = {}
+    standard_headers: set[str] = set()
+    repair_notes: list[str] = []
+    last_messages = messages
+
+    for _ in range(12):
+        missing = [name for name in missing_identifiers(last_messages) if name not in definitions]
+        if not missing:
+            break
+        new_definitions = extract_raw_definitions(raw_text, source_text, missing) if raw_text else {}
+        header_map = inferred_standard_headers(suite, missing)
+        new_headers = {header for header in header_map.values() if header not in standard_headers}
+        if not new_definitions and not new_headers:
+            break
+        definitions.update(new_definitions)
+        standard_headers.update(new_headers)
+        repair_notes.extend(f"{name} from {raw_source.name}" for name in new_definitions)
+        repair_notes.extend(f"<{header}> for {name}" for name, header in header_map.items() if header in new_headers)
+        repaired_source = write_reprocessed_source(source, raw_source, out_dir, definitions, standard_headers, remove_static_markers=True)
+        ok, last_messages = run_emit(suite, repaired_source, ir_path, opt)
+        if ok:
+            return ok, last_messages, repaired_source, repair_notes
+
+    return ok, last_messages, repaired_source, repair_notes
 
 
 def parse_function_blocks(ir: str) -> dict[str, str]:
@@ -332,10 +596,20 @@ def analyze_ir(ir_path: Path) -> OptSummary:
     return summary
 
 
-def format_feature_list(features: Iterable[str]) -> str:
+def ordered_features(features: Iterable[str]) -> list[str]:
     ordered = [feature for feature in FEATURE_ORDER if feature in features]
     extras = sorted(set(features) - set(ordered))
-    return ", ".join(ordered + extras) if ordered or extras else "none"
+    return ordered + extras
+
+
+def append_feature_lines(lines: list[str], features: Iterable[str]) -> None:
+    ordered = ordered_features(features)
+    if not ordered:
+        lines.append("- Features: none")
+        return
+    lines.append("- Features:")
+    for feature in ordered:
+        lines.append(f"  - {feature}")
 
 
 def render_summary(bench: BenchmarkSummary) -> str:
@@ -353,9 +627,9 @@ def render_summary(bench: BenchmarkSummary) -> str:
                 f"## {opt}",
                 "",
                 f"- Status: {opt_summary.status}",
-                f"- Features: {format_feature_list(opt_summary.features)}",
             ]
         )
+        append_feature_lines(lines, opt_summary.features)
         if opt_summary.warnings:
             lines.append("- Compiler messages:")
             for warning in opt_summary.warnings[:8]:
@@ -399,7 +673,11 @@ def render_suite_readme(suite: str, benches: list[BenchmarkSummary]) -> str:
             [
                 f"## {opt}",
                 "",
-                f"- Feature union: {format_feature_list(union)}",
+            ]
+        )
+        append_feature_lines(lines, union)
+        lines.extend(
+            [
                 f"- Status counts: ok={ok}, failed={failed}, unsupported={unsupported}",
                 "",
             ]
@@ -431,8 +709,110 @@ def render_total(all_benches: list[BenchmarkSummary]) -> str:
             [
                 f"## {opt}",
                 "",
-                f"- Feature union: {format_feature_list(union)}",
+            ]
+        )
+        append_feature_lines(lines, union)
+        lines.extend(
+            [
                 f"- Status counts: ok={ok}, failed={failed}, unsupported={unsupported}",
+                "",
+            ]
+        )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+
+
+def first_error(messages: Iterable[str]) -> str:
+    collected: list[str] = []
+    capture = False
+    for message in messages:
+        if "error:" in message:
+            capture = True
+        if capture:
+            collected.append(message)
+            if len(collected) >= 4:
+                break
+    return "\n".join(collected) if collected else "\n".join(list(messages)[:4])
+
+
+def classify_failure(messages: Iterable[str]) -> str:
+    text = "\n".join(messages)
+    if "no matching function" in text:
+        return "no matching function / overload mismatch"
+    if "unknown type name" in text:
+        return "missing type/typedef or header"
+    if (
+        "use of undeclared identifier" in text
+        or "no template named" in text
+        or "undeclared identifier" in text
+    ):
+        return "undeclared identifier or missing helper/header"
+    return "other clang frontend error"
+
+
+def render_failed(all_benches: list[BenchmarkSummary]) -> str:
+    failed = [
+        bench
+        for bench in all_benches
+        if bench.suite != "go_transcoder"
+        and any(bench.opts[opt].status.startswith("failed") for opt in OPTS)
+    ]
+    by_suite: dict[str, int] = defaultdict(int)
+    by_category: dict[str, int] = defaultdict(int)
+    same_status = 0
+    case_data = []
+    for bench in failed:
+        failed_opts = [opt for opt in OPTS if bench.opts[opt].status.startswith("failed")]
+        representative_opt = failed_opts[0]
+        messages = bench.opts[representative_opt].warnings
+        category = classify_failure(messages)
+        by_suite[bench.suite] += 1
+        by_category[category] += 1
+        first_errors = [first_error(bench.opts[opt].warnings) for opt in failed_opts]
+        if len(set(first_errors)) == 1 and len(failed_opts) == len(OPTS):
+            same_status += 1
+        case_data.append((bench, failed_opts, category, first_errors[0]))
+
+    lines = [
+        "# Failed LLVM IR Emit Cases",
+        "",
+        "This file summarizes benchmarks whose processed C/C++ source could not be emitted to LLVM IR with `clang`/`clang++`. Go benchmarks are not listed here because they are `unsupported`, not clang failures.",
+        "",
+        "## Overview",
+        "",
+        f"- Failed benchmarks: {len(failed)}",
+        f"- Same failed status across O0/O1/O2: {same_status}/{len(failed)}",
+    ]
+    for suite in SUITES:
+        if suite == "go_transcoder":
+            continue
+        if by_suite.get(suite, 0):
+            lines.append(f"- {suite}: {by_suite[suite]}")
+    lines.extend(["", "## Reason Categories", ""])
+    if by_category:
+        for category, count in sorted(by_category.items(), key=lambda item: (-item[1], item[0])):
+            lines.append(f"- {category}: {count}")
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Cases", ""])
+    for bench, failed_opts, category, error_text in case_data:
+        summary_path = Path("llvm") / bench.suite / bench.benchmark / "SUMMARY.md"
+        source_path = Path("llvm") / bench.suite / bench.benchmark / (bench.copied_source.name if bench.copied_source else "none")
+        opt_text = "/".join(failed_opts)
+        lines.extend(
+            [
+                f"### {bench.suite}/{bench.benchmark}",
+                "",
+                f"- Summary: `{summary_path}`",
+                f"- Source: `{source_path}`",
+                f"- Failed opts: {opt_text}",
+                f"- Reason category: {category}",
+                "- First clang error:",
+                "",
+                "```text",
+                error_text,
+                "```",
                 "",
             ]
         )
@@ -457,9 +837,14 @@ def process_benchmark(input_root: Path, output_root: Path, suite: str, bench_dir
         for opt in OPTS:
             opts[opt] = OptSummary(status="unsupported: missing Go/TinyGo LLVM emitter")
     else:
+        repair_notes_by_opt: dict[str, list[str]] = {}
+        repaired_sources: set[Path] = set()
         for opt in OPTS:
             ir_path = out_dir / f"{opt}.ll"
-            ok, messages = run_emit(suite, source, ir_path, opt)
+            ok, messages, emit_source, repair_notes = run_emit_with_raw_repairs(suite, source, out_dir, opt)
+            if repair_notes:
+                repair_notes_by_opt[opt] = repair_notes
+                repaired_sources.add(emit_source)
             if ok:
                 summary = analyze_ir(ir_path)
                 summary.warnings = messages
@@ -467,6 +852,10 @@ def process_benchmark(input_root: Path, output_root: Path, suite: str, bench_dir
                 summary = OptSummary(status="failed: clang emit error")
                 summary.warnings = messages
             opts[opt] = summary
+        if repaired_sources:
+            copied_source = sorted(repaired_sources)[0]
+            repaired_names = sorted({note for notes in repair_notes_by_opt.values() for note in notes})
+            note = f"{note}; reprocessed source: {', '.join(repaired_names)}"
 
     bench = BenchmarkSummary(
         suite=suite,
@@ -521,6 +910,7 @@ def main() -> int:
         suite_out.mkdir(parents=True, exist_ok=True)
         (suite_out / "README.md").write_text(render_suite_readme(suite, benches))
     (args.output_root / "TOTAL.md").write_text(render_total(all_benches))
+    (args.output_root / "FAILED.md").write_text(render_failed(all_benches))
 
     return 0
 

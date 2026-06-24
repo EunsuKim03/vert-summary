@@ -1,0 +1,40 @@
+# go_transcoder/SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS
+
+- Source: `SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS.go`
+- Source note: Go source-function extraction from `benchmark/go_transcoder`; `func main` harness removed.
+- Emit source: `SUM_SERIES_0_6_0_06_0_006_0_0006_N_TERMS_emit.go` adds `//go:export f_gold` so TinyGo keeps the benchmark function in LLVM IR.
+- Feature note: features below are extracted from `O*_func.ll`, the `@f_gold` block only. Full `O*.ll` files still include TinyGo runtime/support code.
+
+## O0
+
+- Status: ok
+- Features:
+  - floating-point arithmetic
+  - control flow
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - UB-related
+
+## O1
+
+- Status: ok
+- Features:
+  - floating-point arithmetic
+  - control flow
+  - casts/conversions
+  - calls/intrinsics
+
+## O2
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - floating-point arithmetic
+  - comparisons
+  - control flow
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - UB-related

@@ -1,0 +1,5 @@
+package main
+
+func f_gold(n int) int {
+	return int((n * (n + 1) / 2) * (1 << (n - 1)))
+}

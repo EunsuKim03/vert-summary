@@ -1,0 +1,55 @@
+# go_transcoder/CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND
+
+- Source: `CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND.go`
+- Source note: Go source-function extraction from `benchmark/go_transcoder`; `func main` harness removed.
+- Emit source: `CALCULATE_ANGLE_HOUR_HAND_MINUTE_HAND_emit.go` adds `//go:export f_gold` so TinyGo keeps the benchmark function in LLVM IR.
+- Feature note: features below are extracted from `O*_func.ll`, the `@f_gold` block only. Full `O*.ll` files still include TinyGo runtime/support code.
+
+## O0
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - floating-point arithmetic
+  - comparisons
+  - control flow
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - UB-related
+
+## O1
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - floating-point arithmetic
+  - comparisons
+  - control flow
+  - unreachable
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - atomics/volatile
+  - UB-related
+
+## O2
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - floating-point arithmetic
+  - comparisons
+  - control flow
+  - unreachable
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - atomics/volatile
+  - UB-related

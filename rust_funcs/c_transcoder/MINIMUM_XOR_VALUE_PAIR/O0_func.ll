@@ -1,0 +1,115 @@
+define i32 @f_gold(i64 %0, i32 %n) unnamed_addr #3 {
+start:
+  %_16 = alloca [8 x i8], align 4
+  %iter1 = alloca [8 x i8], align 4
+  %_7 = alloca [8 x i8], align 4
+  %iter = alloca [8 x i8], align 4
+  %min_xor = alloca [4 x i8], align 4
+  %1 = alloca [8 x i8], align 8
+  %arr = alloca [8 x i8], align 4
+  store i64 %0, ptr %1, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %arr, ptr align 8 %1, i64 8, i1 false)
+  store i32 2147483647, ptr %min_xor, align 4
+; call <I as core::iter::traits::collect::IntoIterator>::into_iter
+  %2 = call { i32, i32 } @"_ZN63_$LT$I$u20$as$u20$core..iter..traits..collect..IntoIterator$GT$9into_iter17h9922e060448e99b0E"(i32 0, i32 %n) #20
+  %_4.0 = extractvalue { i32, i32 } %2, 0
+  %_4.1 = extractvalue { i32, i32 } %2, 1
+  store i32 %_4.0, ptr %iter, align 4
+  %3 = getelementptr inbounds i8, ptr %iter, i64 4
+  store i32 %_4.1, ptr %3, align 4
+  br label %bb2
+
+bb2:                                              ; preds = %bb9, %start
+; call core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next
+  %4 = call { i32, i32 } @"_ZN4core4iter5range101_$LT$impl$u20$core..iter..traits..iterator..Iterator$u20$for$u20$core..ops..range..Range$LT$A$GT$$GT$4next17hf41d6e8fddfb9360E"(ptr align 4 %iter) #20
+  %5 = extractvalue { i32, i32 } %4, 0
+  %6 = extractvalue { i32, i32 } %4, 1
+  store i32 %5, ptr %_7, align 4
+  %7 = getelementptr inbounds i8, ptr %_7, i64 4
+  store i32 %6, ptr %7, align 4
+  %8 = load i32, ptr %_7, align 4
+  %9 = getelementptr inbounds i8, ptr %_7, i64 4
+  %10 = load i32, ptr %9, align 4
+  %_9 = zext i32 %8 to i64
+  %11 = trunc nuw i64 %_9 to i1
+  br i1 %11, label %bb5, label %bb6
+
+bb5:                                              ; preds = %bb2
+  %12 = getelementptr inbounds i8, ptr %_7, i64 4
+  %i = load i32, ptr %12, align 4
+  %13 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i, i32 1)
+  %_14.0 = extractvalue { i32, i1 } %13, 0
+  %_14.1 = extractvalue { i32, i1 } %13, 1
+  br i1 %_14.1, label %panic, label %bb7
+
+bb6:                                              ; preds = %bb2
+  %_0 = load i32, ptr %min_xor, align 4
+  ret i32 %_0
+
+bb7:                                              ; preds = %bb5
+; call <I as core::iter::traits::collect::IntoIterator>::into_iter
+  %14 = call { i32, i32 } @"_ZN63_$LT$I$u20$as$u20$core..iter..traits..collect..IntoIterator$GT$9into_iter17h9922e060448e99b0E"(i32 %_14.0, i32 %n) #20
+  %_11.0 = extractvalue { i32, i32 } %14, 0
+  %_11.1 = extractvalue { i32, i32 } %14, 1
+  store i32 %_11.0, ptr %iter1, align 4
+  %15 = getelementptr inbounds i8, ptr %iter1, i64 4
+  store i32 %_11.1, ptr %15, align 4
+  br label %bb9
+
+panic:                                            ; preds = %bb5
+; call core::panicking::panic_const::panic_const_add_overflow
+  call void @_ZN4core9panicking11panic_const24panic_const_add_overflow17h3fc9e60fb8716d57E(ptr align 8 @alloc_22a80c1ffa8cb028fd5e244f77f3dd81) #22
+  unreachable
+
+bb9:                                              ; preds = %bb13, %bb7
+; call core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next
+  %16 = call { i32, i32 } @"_ZN4core4iter5range101_$LT$impl$u20$core..iter..traits..iterator..Iterator$u20$for$u20$core..ops..range..Range$LT$A$GT$$GT$4next17hf41d6e8fddfb9360E"(ptr align 4 %iter1) #20
+  %17 = extractvalue { i32, i32 } %16, 0
+  %18 = extractvalue { i32, i32 } %16, 1
+  store i32 %17, ptr %_16, align 4
+  %19 = getelementptr inbounds i8, ptr %_16, i64 4
+  store i32 %18, ptr %19, align 4
+  %20 = load i32, ptr %_16, align 4
+  %21 = getelementptr inbounds i8, ptr %_16, i64 4
+  %22 = load i32, ptr %21, align 4
+  %_18 = zext i32 %20 to i64
+  %23 = trunc nuw i64 %_18 to i1
+  br i1 %23, label %bb11, label %bb2
+
+bb11:                                             ; preds = %bb9
+  %24 = getelementptr inbounds i8, ptr %_16, i64 4
+  %j = load i32, ptr %24, align 4
+  %_21 = load i32, ptr %min_xor, align 4
+  %_24 = sext i32 %i to i64
+  %_25 = icmp ult i64 %_24, 2
+  br i1 %_25, label %bb12, label %panic2
+
+bb12:                                             ; preds = %bb11
+  %25 = getelementptr inbounds nuw i32, ptr %arr, i64 %_24
+  %_23 = load i32, ptr %25, align 4
+  %_27 = sext i32 %j to i64
+  %_28 = icmp ult i64 %_27, 2
+  br i1 %_28, label %bb13, label %panic3
+
+panic2:                                           ; preds = %bb11
+; call core::panicking::panic_bounds_check
+  call void @_ZN4core9panicking18panic_bounds_check17hb15443e8431033c2E(i64 %_24, i64 2, ptr align 8 @alloc_a1b1e6ce641f77844372b035c5964be5) #22
+  unreachable
+
+bb13:                                             ; preds = %bb12
+  %26 = getelementptr inbounds nuw i32, ptr %arr, i64 %_27
+  %_26 = load i32, ptr %26, align 4
+  %_22 = xor i32 %_23, %_26
+; call core::cmp::Ord::min
+  %_20 = call i32 @_ZN4core3cmp3Ord3min17hd2643ca0b94537cbE(i32 %_21, i32 %_22) #20
+  store i32 %_20, ptr %min_xor, align 4
+  br label %bb9
+
+panic3:                                           ; preds = %bb12
+; call core::panicking::panic_bounds_check
+  call void @_ZN4core9panicking18panic_bounds_check17hb15443e8431033c2E(i64 %_27, i64 2, ptr align 8 @alloc_6fbb71c5eb8575971b4c3602f202ede6) #22
+  unreachable
+
+bb4:                                              ; No predecessors!
+  unreachable
+}

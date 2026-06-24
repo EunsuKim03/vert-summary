@@ -1,0 +1,58 @@
+# c_transcoder/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD
+
+- Kind: llm-output-block
+- Status: failed
+- Source note: out-rwasm-bolero/src/main.rs; added crate-level allow attributes; added #[no_mangle] to top-level non-main functions where possible
+- Source: `rust_funcs/c_transcoder/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD.rs`
+- Emit source: `rust_funcs/c_transcoder/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD_emit.rs`
+- CSV compile expected: True
+- CSV duplicate rows: no
+- CSV rows:
+  - `CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD, compile=1, bolero=0, bounded_kani=0, full_kani=0`
+
+## LLVM IR emission
+
+### O0
+
+- Status: failed
+- Message:
+
+```text
+error[E0308]: mismatched types
+  --> /root/es/vert/vert/rust_funcs/c_transcoder/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD_emit.rs:32:16
+   |
+32 |             if one_seen {
+   |                ^^^^^^^^ expected `bool`, found integer
+error: aborting due to 1 previous error
+For more information about this error, try `rustc --explain E0308`.
+```
+
+### O1
+
+- Status: failed
+- Message:
+
+```text
+error[E0308]: mismatched types
+  --> /root/es/vert/vert/rust_funcs/c_transcoder/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD_emit.rs:32:16
+   |
+32 |             if one_seen {
+   |                ^^^^^^^^ expected `bool`, found integer
+error: aborting due to 1 previous error
+For more information about this error, try `rustc --explain E0308`.
+```
+
+### O2
+
+- Status: failed
+- Message:
+
+```text
+error[E0308]: mismatched types
+  --> /root/es/vert/vert/rust_funcs/c_transcoder/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD/CHECK_NUMBER_POWER_K_USING_BASE_CHANGING_METHOD_emit.rs:32:16
+   |
+32 |             if one_seen {
+   |                ^^^^^^^^ expected `bool`, found integer
+error: aborting due to 1 previous error
+For more information about this error, try `rustc --explain E0308`.
+```

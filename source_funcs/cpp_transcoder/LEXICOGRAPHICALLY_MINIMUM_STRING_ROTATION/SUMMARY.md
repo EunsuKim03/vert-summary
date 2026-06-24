@@ -1,0 +1,114 @@
+# cpp_transcoder/LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION
+
+- Source: `LEXICOGRAPHICALLY_MINIMUM_STRING_ROTATION_reprocessed.cpp`
+- Source note: processed source; reprocessed source: <algorithm> for sort
+
+## O0
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - comparisons
+  - control flow
+  - loop
+  - recursion
+  - unreachable
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - C++/exception
+  - UB-related
+  - globals
+  - external declarations
+- Evidence:
+  - integer arithmetic: `%44 = add nsw i32 %43, 1`
+  - bitwise/shift: `%51 = and i64 %50, 1`
+  - comparisons: `%19 = icmp eq i64 %16, 0`
+  - control flow: `br i1 %19, label %26, label %20`
+  - loop: `llvm.loop metadata`
+  - recursion: `_ZSt16__introsort_loopIPNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEElN9__gnu_cxx5__ops15_Iter_less_iterEEvT_SA_T0_T1_ calls itself`
+  - unreachable: `unreachable`
+  - memory/pointer: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - casts/conversions: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - calls/intrinsics: `%13 = call noundef i64 @_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6lengthEv(%"class.std::__cxx11::basic_string"* noundef nonnull align 8 dereferenceable(32) %1) #3`
+  - aggregates: `%47 = extractvalue { i8*, i32 } %46, 0`
+  - C++/exception: `invoke void @_ZStplIcSt11char_traitsIcESaIcEENSt7__cxx1112basic_stringIT_T0_T1_EERKS8_SA_(%"class.std::__cxx11::basic_string"* sret(%"class.std::__cxx11::basic_string") align 8 %7,`
+  - UB-related: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #1`
+
+## O1
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - comparisons
+  - control flow
+  - loop
+  - recursion
+  - unreachable
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - C++/exception
+  - UB-related
+  - globals
+  - external declarations
+- Evidence:
+  - integer arithmetic: `%78 = sub i64 %70, %69`
+  - bitwise/shift: `%10 = and i64 %8, 4294967295`
+  - comparisons: `%12 = icmp eq i64 %10, 0`
+  - control flow: `br i1 %12, label %23, label %13`
+  - loop: `llvm.loop metadata`
+  - recursion: `_ZSt16__introsort_loopIPNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEElN9__gnu_cxx5__ops15_Iter_less_iterEEvT_SA_T0_T1_ calls itself`
+  - unreachable: `unreachable`
+  - memory/pointer: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - casts/conversions: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - calls/intrinsics: `call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %24) #14`
+  - aggregates: `%"class.std::ios_base::Init" = type { i8 }`
+  - C++/exception: `invoke void @_ZStplIcSt11char_traitsIcESaIcEENSt7__cxx1112basic_stringIT_T0_T1_EERKS8_SA_(%"class.std::__cxx11::basic_string"* nonnull sret(%"class.std::__cxx11::basic_string") ali`
+  - UB-related: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #0`
+
+## O2
+
+- Status: ok
+- Features:
+  - integer arithmetic
+  - bitwise/shift
+  - comparisons
+  - control flow
+  - loop
+  - recursion
+  - unreachable
+  - memory/pointer
+  - casts/conversions
+  - calls/intrinsics
+  - aggregates
+  - vector/SIMD
+  - C++/exception
+  - UB-related
+  - globals
+  - external declarations
+- Evidence:
+  - integer arithmetic: `%77 = sub i64 %69, %68`
+  - bitwise/shift: `%10 = and i64 %8, 4294967295`
+  - comparisons: `%12 = icmp eq i64 %10, 0`
+  - control flow: `br i1 %12, label %23, label %13`
+  - loop: `llvm.loop metadata`
+  - recursion: `_ZSt16__introsort_loopIPNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEElN9__gnu_cxx5__ops15_Iter_less_iterEEvT_SA_T0_T1_ calls itself`
+  - unreachable: `unreachable`
+  - memory/pointer: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - casts/conversions: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - calls/intrinsics: `call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %24) #14`
+  - aggregates: `%"class.std::ios_base::Init" = type { i8 }`
+  - vector/SIMD: `%44 = bitcast i64* %42 to <2 x i64>*`
+  - C++/exception: `invoke void @_ZStplIcSt11char_traitsIcESaIcEENSt7__cxx1112basic_stringIT_T0_T1_EERKS8_SA_(%"class.std::__cxx11::basic_string"* nonnull sret(%"class.std::__cxx11::basic_string") ali`
+  - UB-related: `define dso_local void @_Z6f_goldNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE(%"class.std::__cxx11::basic_string"* noalias sret(%"class.std::__cxx11::basic_string") align 8 `
+  - globals: `@_ZStL8__ioinit = internal global %"class.std::ios_base::Init" zeroinitializer, align 1`
+  - external declarations: `declare void @_ZNSt8ios_base4InitC1Ev(%"class.std::ios_base::Init"* noundef nonnull align 1 dereferenceable(1)) unnamed_addr #0`

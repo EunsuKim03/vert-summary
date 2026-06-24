@@ -1,0 +1,67 @@
+; ModuleID = 'benchmark/c_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1_processed.c'
+source_filename = "benchmark/c_transcoder/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1/HOW_TO_CHECK_IF_A_GIVEN_ARRAY_REPRESENTS_A_BINARY_HEAP_1_processed.c"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+; Function Attrs: nofree norecurse nosync nounwind readonly uwtable
+define dso_local i32 @f_gold(i32* nocapture noundef readonly %0, i32 noundef %1) local_unnamed_addr #0 {
+  %3 = icmp slt i32 %1, 1
+  br i1 %3, label %30, label %4
+
+4:                                                ; preds = %2
+  %5 = add nsw i32 %1, -2
+  %6 = sdiv i32 %5, 2
+  %7 = zext i32 %1 to i64
+  %8 = add nuw nsw i32 %6, 1
+  %9 = zext i32 %8 to i64
+  br label %10
+
+10:                                               ; preds = %4, %27
+  %11 = phi i64 [ 0, %4 ], [ %28, %27 ]
+  %12 = shl nuw nsw i64 %11, 1
+  %13 = or i64 %12, 1
+  %14 = getelementptr inbounds i32, i32* %0, i64 %13
+  %15 = load i32, i32* %14, align 4, !tbaa !5
+  %16 = getelementptr inbounds i32, i32* %0, i64 %11
+  %17 = load i32, i32* %16, align 4, !tbaa !5
+  %18 = icmp sgt i32 %15, %17
+  br i1 %18, label %30, label %19
+
+19:                                               ; preds = %10
+  %20 = add nuw nsw i64 %12, 2
+  %21 = icmp ult i64 %20, %7
+  br i1 %21, label %22, label %27
+
+22:                                               ; preds = %19
+  %23 = and i64 %20, 4294967294
+  %24 = getelementptr inbounds i32, i32* %0, i64 %23
+  %25 = load i32, i32* %24, align 4, !tbaa !5
+  %26 = icmp sgt i32 %25, %17
+  br i1 %26, label %30, label %27
+
+27:                                               ; preds = %19, %22
+  %28 = add nuw nsw i64 %11, 1
+  %29 = icmp eq i64 %28, %9
+  br i1 %29, label %30, label %10, !llvm.loop !9
+
+30:                                               ; preds = %27, %10, %22, %2
+  %31 = phi i32 [ 1, %2 ], [ 0, %22 ], [ 0, %10 ], [ 1, %27 ]
+  ret i32 %31
+}
+
+attributes #0 = { nofree norecurse nosync nounwind readonly uwtable "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+
+!llvm.module.flags = !{!0, !1, !2, !3}
+!llvm.ident = !{!4}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 7, !"PIC Level", i32 2}
+!2 = !{i32 7, !"PIE Level", i32 2}
+!3 = !{i32 7, !"uwtable", i32 1}
+!4 = !{!"Ubuntu clang version 14.0.0-1ubuntu1.1"}
+!5 = !{!6, !6, i64 0}
+!6 = !{!"int", !7, i64 0}
+!7 = !{!"omnipotent char", !8, i64 0}
+!8 = !{!"Simple C/C++ TBAA"}
+!9 = distinct !{!9, !10}
+!10 = !{!"llvm.loop.mustprogress"}

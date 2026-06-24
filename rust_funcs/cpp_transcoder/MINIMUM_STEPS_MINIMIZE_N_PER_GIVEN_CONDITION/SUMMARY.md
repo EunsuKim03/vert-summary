@@ -1,0 +1,28 @@
+# cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION
+
+- Kind: llm-output-block
+- Status: ok
+- Source note: out-rwasm-bolero/src/main.rs; added crate-level allow attributes; added #[no_mangle] to top-level non-main functions where possible
+- Source: `rust_funcs/cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION.rs`
+- Emit source: `rust_funcs/cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION_emit.rs`
+- CSV compile expected: True
+- CSV duplicate rows: no
+- CSV rows:
+  - `MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION, compile=1, bolero=1, bounded_kani=1, full_kani=0`
+
+## LLVM IR emission
+
+### O0
+
+- Status: ok
+- IR: `rust_funcs/cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION/O0.ll`
+
+### O1
+
+- Status: ok
+- IR: `rust_funcs/cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION/O1.ll`
+
+### O2
+
+- Status: ok
+- IR: `rust_funcs/cpp_transcoder/MINIMUM_STEPS_MINIMIZE_N_PER_GIVEN_CONDITION/O2.ll`
